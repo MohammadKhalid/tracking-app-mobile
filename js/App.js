@@ -6,8 +6,6 @@ import {
 import {
   createStackNavigator,
   createAppContainer,
-  createDrawerNavigator,
-  createMaterialTopTabNavigator
 } from 'react-navigation';
 
 import LoginScreen from './Login/Login'
@@ -15,6 +13,7 @@ import AttendanceScreen from './Attendance/Attendance'
 
 const MainNavigator = createStackNavigator({
   navigator: {screen: LoginScreen , navigationOptions:{header: null}},
+  attendance: {screen: AttendanceScreen , navigationOptions:{header: null}},
 });
 
 
@@ -27,8 +26,8 @@ class App extends React.Component {
     return (
       <View style={{flex:1}}>
       <StatusBar barStyle='light-content' backgroundColor="black"></StatusBar>
-      {/* <Apps></Apps> */}
-      <AttendanceScreen></AttendanceScreen>
+      <Apps></Apps>
+      {/* <AttendanceScreen></AttendanceScreen> */}
       </View>
     );
   }

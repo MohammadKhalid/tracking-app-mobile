@@ -7,7 +7,11 @@ export function markAttendance(user,dateObj,type,latitude,longitude){
     let date = dateObj.format("YYYY-MM-DD")
     return new Promise(async (resolve,reject)=>{
         let result = await DBMarkAttendance(user,date,time,type,latitude,longitude)
-        console.log(result)
+        if(result == 1){
+            resolve(1)
+        }else{
+            reject(0)
+        }
     })
 }
 

@@ -4,22 +4,22 @@ import {
     View,
     Text,
     StyleSheet,
-    ScrollView,
     Alert,
-    Image,
-    Animated,
-    PanResponder
+    BackHandler,
+    AsyncStorage
 } from "react-native";
 
 import MapView, { Marker, Circle } from "react-native-maps";
 import moment from "moment"
-import { screenHeight, screenWidth } from "../Commons/Constants";
+import { screenHeight, screenWidth, getToken } from "../Commons/Constants";
 import CalendarStrip from 'react-native-calendar-strip';
 import { markAttendance, getCurrentCords } from "./AttendanceAction";
 import { creatAttendaneTable, test, test2, DBgetSelectedDayAttendance } from "./DBAttendanceFunctions";
 import MapViewDirections from 'react-native-maps-directions';
 import Axios from "axios";
 import Polyline from '@mapbox/polyline';
+var jwtDecode = require('jwt-decode');
+import Spinner from 'react-native-loading-spinner-overlay';
 
 
 export default class Attendance extends Component {
@@ -35,31 +35,73 @@ export default class Attendance extends Component {
             errorMessage: '',
             selectedDateData: [],
             absentStatus: '',
-            coords: []
+            coords: [],
+            token: null,
+            spinner: true,
+            Error: false
         }
+        this._didFocusSubscription = props.navigation.addListener('didFocus', payload =>
+            BackHandler.addEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
+        );
+    }
+
+    onBackButtonPressAndroid = () => {
+
+        if (this.props.navigation.isFocused()) {
+            BackHandler.exitApp()
+        } else {
+            console.log("in backpressandroid else")
+        }
+
+        return true
+    }
+
+    componentDidMount() {
+        this._willBlurSubscription = this.props.navigation.addListener('willBlur', payload =>
+            BackHandler.removeEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
+        );
     }
 
     componentWillMount() {
-        test2()
-        // creates attendance table
         creatAttendaneTable()
-        // gets current coordinates
+        this.getType()
+
+        getToken()
+            .then(response => {
+                this.setState({
+                    token: jwtDecode(response.token)
+                })
+            })
+            .catch(error => {
+                this.setState({
+                    token: null
+                })
+            })
         getCurrentCords()
             .then(result => {
                 this.setState({
                     latitude: result.latitude,
                     longitude: result.longitude,
+                    spinner: false,
+                    Error: false
                 });
             })
             .catch(error => {
                 this.setState({
-                    errorMessage: error.message
+                    errorMessage: 'Unable to find Location.',
+                    spinner: false,
+                    Error: true
                 })
             })
-
     }
 
-    
+    async getType(){
+        let type = await AsyncStorage.getItem('type')
+        this.setState({
+            statusType: type
+        })
+    }
+
 
     askAttendancePermission(date, type, msg) {
         Alert.alert(
@@ -74,14 +116,35 @@ export default class Attendance extends Component {
     }
 
     processAttendance(date, type) {
+        let { token } = this.state
+        this.setState({
+            spinner: true
+        })
+        console.log()
         getCurrentCords()
             .then((result) => {
-                this.setState({ statusType: type })
-                markAttendance(1, date, type, result.latitude, result.longitude)
+                markAttendance(token.User.user_id, date, type, result.latitude, result.longitude)
+                .then(resp=>{
+                this.setState({ 
+                    statusType: type,
+                    spinner: false,
+                    Error: false
+                })
+                AsyncStorage.setItem('type',type)
+                })
+                .catch(err =>{
+                    this.setState({
+                        errorMessage:'Unable to Mark Attendance.',
+                        Error: true,
+                        spinner: false
+                    })
+                })
             })
             .catch(error => {
                 this.setState({
-                    errorMessage: error.message
+                    errorMessage: 'Unable to get Coordinates',
+                    Error: true,
+                    spinner: false
                 })
             })
     }
@@ -117,7 +180,6 @@ export default class Attendance extends Component {
 
     renderMarker(data) {
         if (data.length > 0) {
-            // this.renderDistance(data)
             return data.map(row => {
                 return (
                     <MapView.Marker
@@ -133,34 +195,32 @@ export default class Attendance extends Component {
                 )
             })
         } else {
-            console.log('asd')
+            console.log('in rendermarker else')
         }
     }
 
     renderDistance(data) {
-        console.log(data[0].longtitude)
         if (data.length > 0) {
             try {
-                Axios.get(`https://maps.googleapis.com/maps/api/directions/json?origin=${data[0].latitude+","+data[0].longtitude}&destination=${data[1].latitude+","+data[1].longtitude}&key=AIzaSyC-lBXEXkbbh2hvhZrpn2Q2snVKacI05WQ`)
-                .then(result=>{
-                    console.log(result.data.routes[0].overview_polyline.points)
-                    let points = Polyline.decode(result.data.routes[0].overview_polyline.points)
-                    let coords = points.map((point, index) => {
-                        return  {
-                            latitude : point[0],
-                            longitude : point[1]
-                        }
+                Axios.get(`https://maps.googleapis.com/maps/api/directions/json?origin=${data[0].latitude + "," + data[0].longtitude}&destination=${data[1].latitude + "," + data[1].longtitude}&key=AIzaSyC-lBXEXkbbh2hvhZrpn2Q2snVKacI05WQ`)
+                    .then(result => {
+                        let points = Polyline.decode(result.data.routes[0].overview_polyline.points)
+                        let coords = points.map((point, index) => {
+                            return {
+                                latitude: point[0],
+                                longitude: point[1]
+                            }
+                        })
+                        this.setState({
+                            coords: coords
+                        })
                     })
-                    this.setState({
-                        coords: coords
+                    .catch(error => {
+                        console.log(error)
+                        this.setState({
+                            errorMessage: 'Error in fetch api'
+                        })
                     })
-                })
-                .catch(error=>{
-                    console.log(error)
-                    this.setState({
-                        errorMessage: 'Error in fetch api'
-                    })
-                })
 
             } catch (error) {
                 console.log('masuk fungsi')
@@ -170,13 +230,13 @@ export default class Attendance extends Component {
             }
 
         } else {
-            console.log('asd')
+            console.log('in renderdistance else')
         }
     }
 
 
     render() {
-        let { region, latitude, longitude, statusType, selectedDateData, absentStatus, coords } = this.state
+        let { spinner, statusType, Error,selectedDateData, absentStatus, coords,errorMessage } = this.state
         var timeIn = "--"
         var timeOut = "--"
         var totalHours = "--"
@@ -185,8 +245,16 @@ export default class Attendance extends Component {
             timeOut = moment(selectedDateData[1].time, 'hh:mm:ss').format('hh:mm a')
             totalHours = moment(selectedDateData[1].time, 'hh:mm:ss').diff(moment(selectedDateData[0].time, 'hh:mm:ss'), 'hours') + ' hr(s)'
         }
+        if(Error == true){
+            alert(errorMessage)
+        }
         return (
             <View style={styles.container}>
+                <Spinner
+                    visible={spinner}
+                    textContent={'Loading...'}
+                // textStyle={}
+                />
                 <MapView
 
                     style={styles.mapView}
@@ -200,13 +268,15 @@ export default class Attendance extends Component {
                     // onRegionChange={this.onRegionChange}
                     showsMyLocationButton={true}
                 >
-                    {!!latitude && !!longitude &&
+                    {selectedDateData.length > 0 &&
                         this.renderMarker(selectedDateData)
                     }
-                    <MapView.Polyline
+                    {selectedDateData.length > 0 &&
+                        <MapView.Polyline
                             coordinates={coords}
                             strokeWidth={2}
-                            strokeColor="red" /> 
+                            strokeColor="red" />
+                    }
                     {/* <MapViewDirections
                         origin={{latitude: 24.893148,longitude: 67.066502}}
                         destination={{latitude: 24.948862, longitude: 67.073349}}

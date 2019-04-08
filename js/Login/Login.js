@@ -6,12 +6,13 @@ import {
   Text, 
   View,
   Image,
-  ToastAndroid
+  ToastAndroid,
+  AsyncStorage
 } from 'react-native';
+
 import { login} from "./LoginActions"
-// import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
-import Axios from 'axios';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
+import Spinner from 'react-native-loading-spinner-overlay';
 
 export default class Login extends Component {
   
@@ -19,17 +20,29 @@ export default class Login extends Component {
     super(props)
     this.state = {
       email: '',
-      password: ''
+      password: '',
+      spinner: false
     }
   }
-
+  async componentWillMount(){
+    
+  let token = await AsyncStorage.getItem('token')
+    if(token !== null){
+      this.props.navigation.navigate('attendance')
+    }
+  }
   submit = () =>{
       let {email, password} = this.state
-      
+      this.setState({
+        spinner: true
+      })
       login(email,password)
       .then(response =>{
         let {err,code,message} = response
         if(code == 500){
+          this.setState({
+            spinner: false
+          })
             ToastAndroid.showWithGravityAndOffset(
                 err,
                 ToastAndroid.SHORT,
@@ -38,6 +51,9 @@ export default class Login extends Component {
                 50
             );
         }else{
+          this.setState({
+            spinner: false
+          })
             ToastAndroid.showWithGravityAndOffset(
                 message,
                 ToastAndroid.SHORT,
@@ -45,9 +61,14 @@ export default class Login extends Component {
                 25,
                 50
             );
+            console.log(response)
+            this.props.navigation.navigate('attendance')
         }
       })
       .catch(error=>{
+        this.setState({
+          spinner: false
+        })
         ToastAndroid.showWithGravityAndOffset(
             'Network error',
             ToastAndroid.SHORT,
@@ -61,6 +82,11 @@ export default class Login extends Component {
   render() {
     return (
       <View style={styles.container}>
+        <Spinner
+          visible={this.state.spinner}
+          textContent={'Loading...'}
+          // textStyle={}
+        />
         <View style={styles.logoView}>
             <Image source={require('../../assets/images/mmc-logo.png')}/> 
         </View>
@@ -90,7 +116,7 @@ export default class Login extends Component {
                 </TouchableOpacity>
             </View>
             <View style={{flex: 1}}>
-
+            
             </View>
         </View>
       </View>
