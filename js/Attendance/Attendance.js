@@ -65,6 +65,7 @@ export default class Attendance extends Component {
     componentWillMount() {
         creatAttendaneTable()
         this.getType()
+        test2()
 
         getToken()
             .then(response => {
@@ -95,7 +96,7 @@ export default class Attendance extends Component {
             })
     }
 
-    async getType(){
+    async getType() {
         let type = await AsyncStorage.getItem('type')
         this.setState({
             statusType: type
@@ -124,21 +125,21 @@ export default class Attendance extends Component {
         getCurrentCords()
             .then((result) => {
                 markAttendance(token.User.user_id, date, type, result.latitude, result.longitude)
-                .then(resp=>{
-                this.setState({ 
-                    statusType: type,
-                    spinner: false,
-                    Error: false
-                })
-                AsyncStorage.setItem('type',type)
-                })
-                .catch(err =>{
-                    this.setState({
-                        errorMessage:'Unable to Mark Attendance.',
-                        Error: true,
-                        spinner: false
+                    .then(resp => {
+                        this.setState({
+                            statusType: type,
+                            spinner: false,
+                            Error: false
+                        })
+                        AsyncStorage.setItem('type', type)
                     })
-                })
+                    .catch(err => {
+                        this.setState({
+                            errorMessage: err.errorMessage,
+                            Error: true,
+                            spinner: false
+                        })
+                    })
             })
             .catch(error => {
                 this.setState({
@@ -163,12 +164,16 @@ export default class Attendance extends Component {
                     if (result.dataCode == 0) {
                         this.setState({
                             selectedDateData: result.data,
-                            absentStatus: 'Present'
+                            absentStatus: 'Present',
+                            Error: false,
+                            errorMessage: ''
                         })
                     } else {
                         this.setState({
                             selectedDateData: [],
-                            absentStatus: result.data
+                            absentStatus: result.data,
+                            Error: false,
+                            errorMessage: ''
                         })
                     }
                 })
@@ -180,6 +185,7 @@ export default class Attendance extends Component {
 
     renderMarker(data) {
         if (data.length > 0) {
+            this.renderDistance(data)
             return data.map(row => {
                 return (
                     <MapView.Marker
@@ -204,7 +210,9 @@ export default class Attendance extends Component {
             try {
                 Axios.get(`https://maps.googleapis.com/maps/api/directions/json?origin=${data[0].latitude + "," + data[0].longtitude}&destination=${data[1].latitude + "," + data[1].longtitude}&key=AIzaSyC-lBXEXkbbh2hvhZrpn2Q2snVKacI05WQ`)
                     .then(result => {
+
                         let points = Polyline.decode(result.data.routes[0].overview_polyline.points)
+                        console.log(result.data.routes[0].overview_polyline.points)
                         let coords = points.map((point, index) => {
                             return {
                                 latitude: point[0],
@@ -234,9 +242,15 @@ export default class Attendance extends Component {
         }
     }
 
+    showDirection(data) {
+        return <MapView.Polyline
+            coordinates={data}
+            strokeWidth={2}
+            strokeColor="red" />
+    }
 
     render() {
-        let { spinner, statusType, Error,selectedDateData, absentStatus, coords,errorMessage } = this.state
+        let { spinner, statusType, Error, selectedDateData, absentStatus, coords, errorMessage } = this.state
         var timeIn = "--"
         var timeOut = "--"
         var totalHours = "--"
@@ -245,7 +259,7 @@ export default class Attendance extends Component {
             timeOut = moment(selectedDateData[1].time, 'hh:mm:ss').format('hh:mm a')
             totalHours = moment(selectedDateData[1].time, 'hh:mm:ss').diff(moment(selectedDateData[0].time, 'hh:mm:ss'), 'hours') + ' hr(s)'
         }
-        if(Error == true){
+        if (Error == true) {
             alert(errorMessage)
         }
         return (
@@ -261,8 +275,8 @@ export default class Attendance extends Component {
                     initialRegion={{
                         latitude: 24.89329791,
                         longitude: 67.06640881,
-                        longitudeDelta: 0.2,
-                        latitudeDelta: 0.2,
+                        longitudeDelta: 0.05,
+                        latitudeDelta: 0.05,
                     }}
                     showsUserLocation={true}
                     // onRegionChange={this.onRegionChange}
@@ -272,10 +286,7 @@ export default class Attendance extends Component {
                         this.renderMarker(selectedDateData)
                     }
                     {selectedDateData.length > 0 &&
-                        <MapView.Polyline
-                            coordinates={coords}
-                            strokeWidth={2}
-                            strokeColor="red" />
+                        this.showDirection(coords)
                     }
                     {/* <MapViewDirections
                         origin={{latitude: 24.893148,longitude: 67.066502}}

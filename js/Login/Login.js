@@ -1,21 +1,23 @@
-import React, {Component} from 'react';
+import React, { Component } from 'react';
 import {
-  TextInput, 
-  StyleSheet, 
+  TextInput,
+  StyleSheet,
   TouchableOpacity,
-  Text, 
+  Text,
   View,
   Image,
   ToastAndroid,
-  AsyncStorage
+  AsyncStorage,
+  ImageBackground
 } from 'react-native';
 
-import { login} from "./LoginActions"
+import { login } from "./LoginActions"
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
 import Spinner from 'react-native-loading-spinner-overlay';
+import { screenHeight } from '../Commons/Constants';
 
 export default class Login extends Component {
-  
+
   constructor(props) {
     super(props)
     this.state = {
@@ -24,73 +26,78 @@ export default class Login extends Component {
       spinner: false
     }
   }
-  async componentWillMount(){
-    
-  let token = await AsyncStorage.getItem('token')
-    if(token !== null){
+  async componentWillMount() {
+
+    let token = await AsyncStorage.getItem('token')
+    if (token !== null) {
       this.props.navigation.navigate('attendance')
     }
   }
-  submit = () =>{
-      let {email, password} = this.state
-      this.setState({
-        spinner: true
-      })
-      login(email,password)
-      .then(response =>{
-        let {err,code,message} = response
-        if(code == 500){
+  submit = () => {
+    let { email, password } = this.state
+    this.setState({
+      spinner: true
+    })
+    login(email, password)
+      .then(response => {
+        let { err, code, message } = response
+        if (code == 500) {
           this.setState({
             spinner: false
           })
-            ToastAndroid.showWithGravityAndOffset(
-                err,
-                ToastAndroid.SHORT,
-                ToastAndroid.BOTTOM,
-                25,
-                50
-            );
-        }else{
-          this.setState({
-            spinner: false
-          })
-            ToastAndroid.showWithGravityAndOffset(
-                message,
-                ToastAndroid.SHORT,
-                ToastAndroid.BOTTOM,
-                25,
-                50
-            );
-            console.log(response)
-            this.props.navigation.navigate('attendance')
-        }
-      })
-      .catch(error=>{
-        this.setState({
-          spinner: false
-        })
-        ToastAndroid.showWithGravityAndOffset(
-            'Network error',
+          ToastAndroid.showWithGravityAndOffset(
+            err,
             ToastAndroid.SHORT,
             ToastAndroid.BOTTOM,
             25,
             50
+          );
+        } else {
+          this.setState({
+            spinner: false
+          })
+          ToastAndroid.showWithGravityAndOffset(
+            message,
+            ToastAndroid.SHORT,
+            ToastAndroid.BOTTOM,
+            25,
+            50
+          );
+          console.log(response)
+          this.props.navigation.navigate('attendance')
+        }
+      })
+      .catch(error => {
+        this.setState({
+          spinner: false
+        })
+        ToastAndroid.showWithGravityAndOffset(
+          'Network error',
+          ToastAndroid.SHORT,
+          ToastAndroid.BOTTOM,
+          25,
+          50
         );
       })
   }
 
   render() {
     return (
-      <View style={styles.container}>
-        <Spinner
+      <ImageBackground source={require('../../assets/images/whole-back.jpg')} style={styles.container}>
+         <Spinner
           visible={this.state.spinner}
           textContent={'Loading...'}
           // textStyle={}
         />
+        
+        
         <View style={styles.logoView}>
-            <Image source={require('../../assets/images/mmc-logo.png')}/> 
+            {/* <Image source={require('../../assets/images/mmc-logo.png')}/>  */}
         </View>
         <View style={styles.formView}>
+            <View style={{flex:1 }}>
+            
+            </View>
             <View style={[styles.textInputViewGroup]}>
                 <View style={styles.textInputView}>
                 <Icon name="email" size={25}/>
@@ -109,52 +116,56 @@ export default class Login extends Component {
                     secureTextEntry={true}
                 />
                 </View>
-                <TouchableOpacity onPress={this.submit} style={styles.btn}>
-                    <Text style={{fontSize: 20}}>
-                        Login
+                {/* <TouchableOpacity onPress={this.submit} style={styles.btn}> */}
+                    <Text onPress={this.submit} style={{fontSize: 30}}>
+                        Enter
                     </Text>
-                </TouchableOpacity>
+                {/* </TouchableOpacity> */}
             </View>
             <View style={{flex: 1}}>
             
             </View>
         </View>
-      </View>
+      </ImageBackground>
     );
   }
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex : 1,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    
   },
   logoView: {
-        flex: 3,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
+    flex: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    
+  },
   formView: {
-      flex: 4,
+    flex: 6,
   },
-  textInputViewGroup:{
-      flex: 2,
-      justifyContent: 'space-between',
-      alignItems: 'center'
+  textInputViewGroup: {
+    flex: 2,
+    justifyContent: 'space-evenly',
+    alignItems: 'center'
   },
-  textInputView:{
+  textInputView: {
     flexDirection: "row",
     alignItems: 'center',
     borderBottomWidth: 2,
     width: '80%'
   },
-  btn:{
-      borderRadius: 15,
-      backgroundColor: 'lightgrey',
-      width: '75%',
-      height: 50,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: 'grey'
+  btn: {
+    borderRadius: 15,
+    backgroundColor: 'lightgrey',
+    width: '75%',
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'grey'
   }
 });
