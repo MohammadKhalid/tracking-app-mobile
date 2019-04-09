@@ -8,7 +8,8 @@ import {
   Image,
   ToastAndroid,
   AsyncStorage,
-  ImageBackground
+  ImageBackground,
+  KeyboardAvoidingView
 } from 'react-native';
 
 import { login } from "./LoginActions"
@@ -34,6 +35,7 @@ export default class Login extends Component {
     }
   }
   submit = () => {
+    console.log('asddsad')
     let { email, password } = this.state
     this.setState({
       spinner: true
@@ -79,54 +81,67 @@ export default class Login extends Component {
           50
         );
       })
+
+      setTimeout(() => {
+        this.setState({
+          spinner: false
+        })
+        ToastAndroid.showWithGravityAndOffset(
+          'Unable to connect',
+          ToastAndroid.SHORT,
+          ToastAndroid.BOTTOM,
+          25,
+          50
+        );
+      }, 10000);
   }
 
   render() {
     return (
       <ImageBackground source={require('../../assets/images/whole-back.jpg')} style={styles.container}>
-         <Spinner
-          visible={this.state.spinner}
-          textContent={'Loading...'}
+          <Spinner
+            visible={this.state.spinner}
+            textContent={'Loading...'}
           // textStyle={}
-        />
-        
-        
-        <View style={styles.logoView}>
-            {/* <Image source={require('../../assets/images/mmc-logo.png')}/>  */}
-        </View>
-        <View style={styles.formView}>
-            <View style={{flex:1 }}>
-            
+          />
+
+
+          <View style={styles.logoView}>
+            <Image source={require('../../assets/images/tazza-logo.png')}/> 
+          </View>
+          <View style={styles.formView}>
+            <View style={{ flex: 1,justifyContent: 'center',alignItems: 'center' }}>
+            <Image  source={require('../../assets/images/sign-in-logo.png')}/> 
             </View>
             <View style={[styles.textInputViewGroup]}>
-                <View style={styles.textInputView}>
-                <Icon name="email" size={25}/>
+              <View style={styles.textInputView}>
+                <Icon name="email" size={25} />
                 <TextInput
-                    onChangeText ={(text)=>{this.setState({email: text})}}
-                    style={{width: '100%'}}
-                    placeholder='Email'
+                  onChangeText={(text) => { this.setState({ email: text }) }}
+                  style={{ width: '100%' }}
+                  placeholder='Email'
                 />
-                </View>
-                <View style={styles.textInputView}>
-                <Icon name="lock-outline"  size={25}/>
+              </View>
+              <View style={styles.textInputView}>
+                <Icon name="lock-outline" size={25} />
                 <TextInput
-                    onChangeText ={(text)=>{this.setState({password: text})}}
-                    style={{width: '100%'}}
-                    placeholder='Password'
-                    secureTextEntry={true}
+                  onChangeText={(text) => { this.setState({ password: text }) }}
+                  style={{ width: '100%' }}
+                  placeholder='Password'
+                  secureTextEntry={true}
                 />
-                </View>
-                {/* <TouchableOpacity onPress={this.submit} style={styles.btn}> */}
-                    <Text onPress={this.submit} style={{fontSize: 30}}>
-                        Enter
-                    </Text>
-                {/* </TouchableOpacity> */}
+              </View>
+              {/* <TouchableOpacity onPress={this.submit} style={styles.btn}> */}
+              <Text onPress={this.submit} style={{ fontSize: 30 }}>
+                Enter
+              </Text>
+              {/* </TouchableOpacity> */}
             </View>
-            <View style={{flex: 1}}>
-            
+            <View style={{ flex: 1 }}>
+
             </View>
-        </View>
-      </ImageBackground>
+          </View>
+        </ImageBackground>
     );
   }
 }
@@ -136,13 +151,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    
+
   },
   logoView: {
     flex: 3,
     justifyContent: 'center',
     alignItems: 'center',
-    
+
   },
   formView: {
     flex: 6,

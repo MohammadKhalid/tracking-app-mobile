@@ -20,6 +20,7 @@ import Axios from "axios";
 import Polyline from '@mapbox/polyline';
 var jwtDecode = require('jwt-decode');
 import Spinner from 'react-native-loading-spinner-overlay';
+import Icon from "react-native-vector-icons/Entypo"
 
 
 export default class Attendance extends Component {
@@ -45,6 +46,12 @@ export default class Attendance extends Component {
         );
     }
 
+    static navigationOptions = {
+        tabBarIcon: ({ tintColor }) => (
+            <Icon name="location-pin" size={25} style={{ color: tintColor }} />
+        )
+    }
+
     onBackButtonPressAndroid = () => {
 
         if (this.props.navigation.isFocused()) {
@@ -56,44 +63,48 @@ export default class Attendance extends Component {
         return true
     }
 
+    
+
     componentDidMount() {
         this._willBlurSubscription = this.props.navigation.addListener('willBlur', payload =>
             BackHandler.removeEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
         );
-    }
+        this.didFocusListener = this.props.navigation.addListener('didFocus', () => {
+            this.setState({
+                spinner: true
+            })
+            creatAttendaneTable()
+            this.getType()
+            test2()
 
-    componentWillMount() {
-        creatAttendaneTable()
-        this.getType()
-        test2()
-
-        getToken()
-            .then(response => {
-                this.setState({
-                    token: jwtDecode(response.token)
+            getToken()
+                .then(response => {
+                    this.setState({
+                        token: jwtDecode(response.token)
+                    })
                 })
-            })
-            .catch(error => {
-                this.setState({
-                    token: null
+                .catch(error => {
+                    this.setState({
+                        token: null
+                    })
                 })
-            })
-        getCurrentCords()
-            .then(result => {
-                this.setState({
-                    latitude: result.latitude,
-                    longitude: result.longitude,
-                    spinner: false,
-                    Error: false
-                });
-            })
-            .catch(error => {
-                this.setState({
-                    errorMessage: 'Unable to find Location.',
-                    spinner: false,
-                    Error: true
+            getCurrentCords()
+                .then(result => {
+                    this.setState({
+                        latitude: result.latitude,
+                        longitude: result.longitude,
+                        spinner: false,
+                        Error: false
+                    });
                 })
-            })
+                .catch(error => {
+                    this.setState({
+                        errorMessage: 'Unable to find Location.',
+                        spinner: false,
+                        Error: true
+                    })
+                })
+        })
     }
 
     async getType() {
@@ -231,7 +242,6 @@ export default class Attendance extends Component {
                     })
 
             } catch (error) {
-                console.log('masuk fungsi')
                 this.setState({
                     errorMessage: 'Error in fetch points function'
                 })
