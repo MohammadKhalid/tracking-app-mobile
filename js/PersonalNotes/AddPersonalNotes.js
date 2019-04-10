@@ -16,7 +16,7 @@ import moment from 'moment'
 import DatePicker from 'react-native-datepicker'
 import { appMaincolor } from '../Commons/Constants';
 import { createNotesTable, DBInsertPersonalNote } from './DBPersonalNotesFunction';
-
+var jwtDecode = require('jwt-decode');
 
 
 export default class AddPersonalNotes extends Component {
@@ -30,16 +30,28 @@ export default class AddPersonalNotes extends Component {
             subNotes: '',
             Error: false,
             errorMessage: '',
-            spinner: false
+            spinner: false,
+            token: null
         }
     }
 
     componentDidMount(){
         createNotesTable()
+        getToken()
+        .then(response => {
+            this.setState({
+                token: jwtDecode(response.token)
+            })
+        })
+        .catch(error => {
+            this.setState({
+                token: null
+            })
+        })
     }
 
     makeSave() {
-        let {titleText,note,subNotes,datetime,Error,errorMessage} = this.state
+        let {titleText,note,subNotes,datetime,Error,errorMessage,token} = this.state
         if(titleText == ''){
             this.setState({
                 Error: true,
@@ -63,7 +75,7 @@ export default class AddPersonalNotes extends Component {
             this.setState({
                 spinner: true
             })
-            DBInsertPersonalNote(titleText,note,subNotes,datetime)
+            DBInsertPersonalNote(titleText,note,subNotes,datetime,token.User.user_id)
             .then(response=>{
                 this.setState({
                     spinner: false
@@ -82,8 +94,8 @@ export default class AddPersonalNotes extends Component {
 
     render() {
 
-        let {datetime,Error,errorMessage,spinner}= this.state
-        
+        let {datetime,Error,errorMessage,spinner,token}= this.state
+        console.log(token)
         return (
 
             <View style={styles.mainApp}>

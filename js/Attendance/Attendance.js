@@ -13,7 +13,7 @@ import MapView, { Marker, Circle } from "react-native-maps";
 import moment from "moment"
 import { screenHeight, screenWidth, getToken } from "../Commons/Constants";
 import CalendarStrip from 'react-native-calendar-strip';
-import { markAttendance, getCurrentCords } from "./AttendanceAction";
+import { markAttendance, getCurrentCords, fetchAttendance, fetchTasksMarkers } from "./AttendanceAction";
 import { creatAttendaneTable, test, test2, DBgetSelectedDayAttendance } from "./DBAttendanceFunctions";
 import MapViewDirections from 'react-native-maps-directions';
 import Axios from "axios";
@@ -39,7 +39,8 @@ export default class Attendance extends Component {
             coords: [],
             token: null,
             spinner: true,
-            Error: false
+            Error: false,
+            selectedDateTasks: []
         }
         this._didFocusSubscription = props.navigation.addListener('didFocus', payload =>
             BackHandler.addEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
@@ -63,7 +64,7 @@ export default class Attendance extends Component {
         return true
     }
 
-    
+
 
     componentDidMount() {
         this._willBlurSubscription = this.props.navigation.addListener('willBlur', payload =>
@@ -162,7 +163,7 @@ export default class Attendance extends Component {
     }
 
     dateSelected = (date) => {
-        let { statusType } = this.state
+        let { statusType, token } = this.state
         if (date.format("YYYY-MM-DD") == moment().format("YYYY-MM-DD")) {
             if (statusType == null || statusType == 'CheckedOut') {
                 this.askAttendancePermission(date, 'CheckedIn', 'Check in')
@@ -170,43 +171,71 @@ export default class Attendance extends Component {
                 this.askAttendancePermission(date, 'CheckedOut', 'Check out')
             }
         } else {
-            DBgetSelectedDayAttendance(date)
+            fetchAttendance(date, token.User.user_id)
                 .then(result => {
                     if (result.dataCode == 0) {
                         this.setState({
                             selectedDateData: result.data,
-                            absentStatus: 'Present',
+                            absentStatus: result.message,
                             Error: false,
                             errorMessage: ''
                         })
                     } else {
                         this.setState({
                             selectedDateData: [],
-                            absentStatus: result.data,
+                            absentStatus: result.message,
                             Error: false,
                             errorMessage: ''
                         })
                     }
                 })
                 .catch(error => {
-                    console.log(error)
+                    this.setState({
+                        Error: true,
+                        errorMessage: 'Network error'
+                    })
                 })
+            fetchTasksMarkers(date, token.User.user_id)
+                .then(result => {
+                    console.log(result)
+                    if (result.dataCode == 0) {
+                        this.setState({
+                            selectedDateTasks:result.data,
+                            Error: false,
+                            errorMessage: ''
+                        })
+                    } else {
+                        this.setState({
+                            selectedDateTasks:[],
+                            Error: false,
+                            errorMessage: ''
+                        })
+                    }
+                })
+                .catch(error => {
+                    this.setState({
+                        Error: true,
+                        errorMessage: 'Network error'
+                    })
+                })
+
         }
     }
 
     renderMarker(data) {
+            // this.renderDistance(data)
+        console.log(data)
         if (data.length > 0) {
-            this.renderDistance(data)
-            return data.map(row => {
+            return data.map((row, ind) => {
                 return (
                     <MapView.Marker
-                        key={row.id}
-                        title={row.type}
+                        key={ind}
+                        title={(row['tbl_schedule.Status'] == null) ? row['tbl_Attenence.Status'] : row['tbl_schedule.Status']}
                         coordinate={{
-                            latitude: row.latitude,
-                            longitude: row.longtitude,
-                            longitudeDelta: 0.2,
-                            latitudeDelta: 0.2,
+                            latitude:  row.Lattitude, 
+                            longitude: row.Longitude,
+                            longitudeDelta: 0.05,
+                            latitudeDelta: 0.05,
                         }}
                     />
                 )
@@ -260,7 +289,7 @@ export default class Attendance extends Component {
     }
 
     render() {
-        let { spinner, statusType, Error, selectedDateData, absentStatus, coords, errorMessage } = this.state
+        let { spinner, statusType, Error, selectedDateData, absentStatus,selectedDateTasks, coords, errorMessage, latitude, longitude } = this.state
         var timeIn = "--"
         var timeOut = "--"
         var totalHours = "--"
@@ -280,24 +309,24 @@ export default class Attendance extends Component {
                 // textStyle={}
                 />
                 <MapView
-
                     style={styles.mapView}
-                    initialRegion={{
-                        latitude: 24.89329791,
-                        longitude: 67.06640881,
-                        longitudeDelta: 0.05,
-                        latitudeDelta: 0.05,
+                    region={{
+                        latitude: latitude,
+                        longitude: longitude,
+                        longitudeDelta: 0.3,
+                        latitudeDelta: 0.3,
                     }}
+
                     showsUserLocation={true}
                     // onRegionChange={this.onRegionChange}
                     showsMyLocationButton={true}
                 >
-                    {selectedDateData.length > 0 &&
-                        this.renderMarker(selectedDateData)
+                    {selectedDateTasks.length > 0 &&
+                        this.renderMarker(selectedDateTasks)
                     }
-                    {selectedDateData.length > 0 &&
+                    {/* {selectedDateData.length > 0 &&
                         this.showDirection(coords)
-                    }
+                    } */}
                     {/* <MapViewDirections
                         origin={{latitude: 24.893148,longitude: 67.066502}}
                         destination={{latitude: 24.948862, longitude: 67.073349}}

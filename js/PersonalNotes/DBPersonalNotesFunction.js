@@ -25,11 +25,11 @@ export function createNotesTable() {
 }
 
 
-export function DBInsertPersonalNote(titleText, note, subNotes, datetime) {
+export function DBInsertPersonalNote(titleText, note, subNotes, datetime,user_id) {
     return new Promise((resolve, reject) => {
         db.transaction((txn) => {
 
-            txn.executeSql(`insert into tbl_personal(title,note,subnote,date,user_id) values('${titleText}','${note}','${subNotes}','${datetime}',1)`, [], (tx, res) => {
+            txn.executeSql(`insert into tbl_personal(title,note,subnote,date,user_id) values('${titleText}','${note}','${subNotes}','${datetime}',${user_id})`, [], (tx, res) => {
                 if (res.rowsAffected == 1) {
                     resolve({ error: false, message: 'Notes inserted.' })
                 } else {

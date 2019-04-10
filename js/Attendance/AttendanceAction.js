@@ -45,6 +45,71 @@ export function sendCurrentAttendance(user,date,time,type,latitude,longitude){
     }
 }
 
+export function fetchAttendance(date,user){
+    return new Promise((resolve,reject)=>{
+        let tmp = date.format('YYYY-MM-DD')
+        try {
+            Axios.get(baseUrl+`attendance/getAttendance/${user}/${tmp}`)
+            .then(resp =>{
+                if(resp.data.data.length > 0){
+                    resolve({
+                        code: 200,
+                        data: resp.data.data,
+                        message: 'Present',
+                        dataCode: 0
+                    })
+                }else{
+                    resolve({
+                        code: 200,
+                        data: resp.data.data,
+                        message: 'Absent',
+                        dataCode: 1
+                    })
+                }
+            })
+            .catch(error=>{
+                reject({
+                    code: 500,
+                    data: [],
+                    message: 'Network error'
+                })
+            })
+        } catch (error) {
+            
+        }
+    })
+}
+
+export function fetchTasksMarkers(date,user){
+    return new Promise((resolve,reject)=>{
+        let tmp = date.format('YYYY-MM-DD')
+            Axios.get(baseUrl+`task/taskMarker/${user}/${tmp}`)
+            .then(resp =>{
+                if(resp.data.data.length > 0){
+                    resolve({
+                        code: 200,
+                        data: resp.data.data,
+                        dataCode: 0
+                    })
+                }else{
+                    resolve({
+                        code: 200,
+                        data: resp.data.data,
+                        dataCode: 1
+                    })
+                }
+            })
+            .catch(error=>{
+                reject({
+                    code: 500,
+                    data: [],
+                    message: 'Network error'
+                })
+            })
+    
+    })
+}
+
 export function getCurrentCords() {
     return new Promise((resolve,reject)=>{
         navigator.geolocation.getCurrentPosition(
