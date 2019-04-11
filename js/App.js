@@ -15,11 +15,13 @@ import { appMaincolor } from './Commons/Constants';
 import PersonalNotesScreen from './PersonalNotes/PersonalNotesScreen';
 import AddPersonalNotes from './PersonalNotes/AddPersonalNotes';
 import ViewPersonalNotes from './PersonalNotes/ViewPersonalNotes';
+import ScheduleScreen from './Schedule/ScheduleScreen';
 
 
 // -------------- top navigator -------------
 const AppTabNavigator = createMaterialTopTabNavigator({
   attendance: AttendanceScreen ,
+  schedule: ScheduleScreen,
   personalnotes: PersonalNotesScreen
 },{
   swipeEnabled: true,
@@ -64,6 +66,7 @@ class App extends React.Component {
       <View style={{flex:1}}>
       <StatusBar barStyle='light-content' backgroundColor='orange'></StatusBar>
       <Apps></Apps>
+      {/* <ScheduleScreen></ScheduleScreen> */}
       {/* <AttendanceScreen></AttendanceScreen> */}
       </View>
     );

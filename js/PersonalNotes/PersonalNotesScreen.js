@@ -14,7 +14,7 @@ import IconM from "react-native-vector-icons/MaterialCommunityIcons"
 import moment from 'moment'
 import { appMaincolor } from '../Commons/Constants';
 import Spinner from 'react-native-loading-spinner-overlay';
-import { DBSelectAllNotes, test } from './DBPersonalNotesFunction';
+import { DBSelectAllNotes, test, createNotesTable } from './DBPersonalNotesFunction';
 
 export default class PersonalNotesScreen extends Component {
 
@@ -46,7 +46,7 @@ export default class PersonalNotesScreen extends Component {
 
     componentDidMount() {
         this.didFocusListener = this.props.navigation.addListener('didFocus', () => {
-            
+        createNotesTable()
             DBSelectAllNotes()
                 .then(response => {
                     this.setState({

@@ -14,8 +14,8 @@ import IconE from "react-native-vector-icons/Entypo"
 import IconM from "react-native-vector-icons/MaterialCommunityIcons"
 import moment from 'moment'
 import DatePicker from 'react-native-datepicker'
-import { appMaincolor } from '../Commons/Constants';
-import { createNotesTable, DBInsertPersonalNote } from './DBPersonalNotesFunction';
+import { appMaincolor, getToken } from '../Commons/Constants';
+import {  DBInsertPersonalNote } from './DBPersonalNotesFunction';
 var jwtDecode = require('jwt-decode');
 
 
@@ -36,7 +36,6 @@ export default class AddPersonalNotes extends Component {
     }
 
     componentDidMount(){
-        createNotesTable()
         getToken()
         .then(response => {
             this.setState({
