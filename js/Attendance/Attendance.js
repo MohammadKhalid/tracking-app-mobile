@@ -6,7 +6,9 @@ import {
     StyleSheet,
     Alert,
     BackHandler,
-    AsyncStorage
+    AsyncStorage,
+    ScrollView,
+    Animated,
 } from "react-native";
 
 import MapView, { Marker, Circle } from "react-native-maps";
@@ -14,15 +16,18 @@ import moment from "moment"
 import { screenHeight, screenWidth, getToken } from "../Commons/Constants";
 import CalendarStrip from 'react-native-calendar-strip';
 import { markAttendance, getCurrentCords, fetchAttendance, fetchTasksMarkers } from "./AttendanceAction";
-import { creatAttendaneTable, test, test2, DBgetSelectedDayAttendance } from "./DBAttendanceFunctions";
+import { creatAttendaneTable, test, test2, DBgetSelectedDayAttendance, creatTrackingTable, syncBulkTrackData } from "./DBAttendanceFunctions";
 import MapViewDirections from 'react-native-maps-directions';
 import Axios from "axios";
 import Polyline from '@mapbox/polyline';
 var jwtDecode = require('jwt-decode');
 import Spinner from 'react-native-loading-spinner-overlay';
 import Icon from "react-native-vector-icons/Entypo"
+import NetInfo from "@react-native-community/netinfo";
+import { backgroundConfig, onBackground, onForeground, start, stop } from "./BackgroundLocationConfig";
 
 
+const BOX_HEIGHT = (screenHeight / 8) + 30
 export default class Attendance extends Component {
     constructor(props) {
         super(props)
@@ -40,7 +45,8 @@ export default class Attendance extends Component {
             token: null,
             spinner: true,
             Error: false,
-            selectedDateTasks: []
+            selectedDateTasks: [],
+            scrollY: new Animated.Value(0)
         }
         this._didFocusSubscription = props.navigation.addListener('didFocus', payload =>
             BackHandler.addEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
@@ -70,14 +76,15 @@ export default class Attendance extends Component {
         this._willBlurSubscription = this.props.navigation.addListener('willBlur', payload =>
             BackHandler.removeEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
         );
-        this.didFocusListener = this.props.navigation.addListener('didFocus', () => {
+        this.didFocusListener = this.props.navigation.addListener('didFocus', async () => {
             this.setState({
                 spinner: true
             })
+            creatTrackingTable()
             creatAttendaneTable()
-            this.getType()
-            test2()
 
+            this.getType()
+            // test2()
             getToken()
                 .then(response => {
                     this.setState({
@@ -105,6 +112,10 @@ export default class Attendance extends Component {
                         Error: true
                     })
                 })
+            let connected = await NetInfo.isConnected.fetch()
+            if (connected == true) {
+                syncBulkTrackData()
+            }
         })
     }
 
@@ -133,7 +144,11 @@ export default class Attendance extends Component {
         this.setState({
             spinner: true
         })
-        console.log()
+        if (type == 'CheckedIn') {
+            start()
+        } else if (type == 'CheckedOut') {
+            stop()
+        }
         getCurrentCords()
             .then((result) => {
                 markAttendance(token.User.user_id, date, type, result.latitude, result.longitude)
@@ -173,21 +188,12 @@ export default class Attendance extends Component {
         } else {
             fetchAttendance(date, token.User.user_id)
                 .then(result => {
-                    if (result.dataCode == 0) {
-                        this.setState({
-                            selectedDateData: result.data,
-                            absentStatus: result.message,
-                            Error: false,
-                            errorMessage: ''
-                        })
-                    } else {
-                        this.setState({
-                            selectedDateData: [],
-                            absentStatus: result.message,
-                            Error: false,
-                            errorMessage: ''
-                        })
-                    }
+                    console.log(result)
+                    this.setState({
+                        selectedDateData: result.data,
+                        Error: false,
+                        errorMessage: ''
+                    })
                 })
                 .catch(error => {
                     this.setState({
@@ -200,13 +206,13 @@ export default class Attendance extends Component {
                     console.log(result)
                     if (result.dataCode == 0) {
                         this.setState({
-                            selectedDateTasks:result.data,
+                            selectedDateTasks: result.data,
                             Error: false,
                             errorMessage: ''
                         })
                     } else {
                         this.setState({
-                            selectedDateTasks:[],
+                            selectedDateTasks: [],
                             Error: false,
                             errorMessage: ''
                         })
@@ -222,17 +228,21 @@ export default class Attendance extends Component {
         }
     }
 
+    componentWillUnmount() {
+        // console.log('asdasd')
+    }
+
     renderMarker(data) {
-            // this.renderDistance(data)
-        console.log(data)
+        // this.renderDistance(data)
+        // this.showDirection(data)
         if (data.length > 0) {
             return data.map((row, ind) => {
                 return (
                     <MapView.Marker
                         key={ind}
-                        title={(row['tbl_schedule.Status'] == null) ? row['tbl_Attenence.Status'] : row['tbl_schedule.Status']}
+                        title={(row['tbl_schedule.Status'] != null) ? row['tbl_schedule.Status'] : (row['tbl_Attenence.Status'] != null) ? row['tbl_Attenence.Status'] : "on way " + moment(row.time, "hh:mm:ss").format("hh:mm a")}
                         coordinate={{
-                            latitude:  row.Lattitude, 
+                            latitude: row.Lattitude,
                             longitude: row.Longitude,
                             longitudeDelta: 0.05,
                             latitudeDelta: 0.05,
@@ -282,25 +292,29 @@ export default class Attendance extends Component {
     }
 
     showDirection(data) {
+        let coords = data.map(row => { return { latitude: row.Lattitude, longitude: row.Longitude } })
+        console.log(coords)
         return <MapView.Polyline
-            coordinates={data}
+            coordinates={coords}
             strokeWidth={2}
             strokeColor="red" />
     }
 
     render() {
-        let { spinner, statusType, Error, selectedDateData, absentStatus,selectedDateTasks, coords, errorMessage, latitude, longitude } = this.state
+        let { spinner, statusType, Error, scrollY, selectedDateData, absentStatus, selectedDateTasks, coords, errorMessage, latitude, longitude } = this.state
         var timeIn = "--"
         var timeOut = "--"
         var totalHours = "--"
-        if (selectedDateData.length > 0) {
-            timeIn = moment(selectedDateData[0].time, 'hh:mm:ss').format('hh:mm a')
-            timeOut = moment(selectedDateData[1].time, 'hh:mm:ss').format('hh:mm a')
-            totalHours = moment(selectedDateData[1].time, 'hh:mm:ss').diff(moment(selectedDateData[0].time, 'hh:mm:ss'), 'hours') + ' hr(s)'
-        }
+        console.log("selectedDateData", selectedDateData)
         if (Error == true) {
             alert(errorMessage)
         }
+
+        const boxAnimatedHeight = scrollY.interpolate({
+            inputRange: [0, 3500],
+            outputRange: [BOX_HEIGHT, BOX_HEIGHT + 1500],
+            extrapolate: 'clamp'
+        })
         return (
             <View style={styles.container}>
                 <Spinner
@@ -324,9 +338,9 @@ export default class Attendance extends Component {
                     {selectedDateTasks.length > 0 &&
                         this.renderMarker(selectedDateTasks)
                     }
-                    {/* {selectedDateData.length > 0 &&
-                        this.showDirection(coords)
-                    } */}
+                    {selectedDateTasks.length > 0 &&
+                        this.showDirection(selectedDateTasks)
+                    }
                     {/* <MapViewDirections
                         origin={{latitude: 24.893148,longitude: 67.066502}}
                         destination={{latitude: 24.948862, longitude: 67.073349}}
@@ -362,20 +376,70 @@ export default class Attendance extends Component {
                             }}
                         />
                     </View>
-                    <View style={styles.cardView}>
-                        <View style={styles.cardDateView}>
-                            <Text style={styles.txtBlack}>
-                                {moment().format('MMMM, YYYY')}
-                            </Text>
-                        </View>
+                    <Animated.View style={[styles.cardView, { width: screenWidth - 25, height: boxAnimatedHeight }]}>
+                        <ScrollView
+                            scrollEventThrottle={16}
+                            onScroll={Animated.event(
+                                [{ nativeEvent: { contentOffset: { y: this.state.scrollY } } }]
+                            )}
+                        >
+                            {
+                                (selectedDateData.length != 0) ?
+                                    <View>
+                                        {
+                                            selectedDateData.map((row, ind) => {
+                                                let currentDate = moment(row.Date).format('DD MMMM,YYYY')
+                                                if (Object.entries(row).length == 2) {
+                                                    let timearr = row.Time.split(',')
+                                                    timeIn = moment(timearr[0], 'hh:mm:ss').format("hh:mm a")
+                                                    timeOut = moment(timearr[1], 'hh:mm:ss').format("hh:mm a")
+                                                    totalHours = moment(timearr[1], 'hh:mm:ss').diff(moment(timearr[0], 'hh:mm:ss'), 'hours') + ' hr(s)'
+                                                    absentStatus = "Present"
+                                                } else {
+                                                    absentStatus = "Absent"
+                                                    timeIn = "--"
+                                                    timeOut = "--"
+                                                    totalHours = "--"
+                                                }
+                                                return (
+                                                    <View key={ind} style={{ width: screenWidth - 25, height: BOX_HEIGHT }}>
 
-                        <View style={styles.attendanceDetailsView}>
-                            <AttendanceCardData title="Time in" value={timeIn} />
-                            <AttendanceCardData title="Time Out" value={timeOut} />
-                            <AttendanceCardData title="Total Time" value={totalHours} />
-                            <AttendanceCardData title="Attendance" value={absentStatus} />
-                        </View>
-                    </View>
+                                                        <View style={styles.cardDateView}>
+                                                            <Text style={styles.txtBlack}>
+                                                                {currentDate}
+                                                            </Text>
+                                                        </View>
+
+                                                        <View style={styles.attendanceDetailsView}>
+                                                            <AttendanceCardData title="Time in" value={timeIn} />
+                                                            <AttendanceCardData title="Time Out" value={timeOut} />
+                                                            <AttendanceCardData title="Total Time" value={totalHours} />
+                                                            <AttendanceCardData title="Attendance" value={absentStatus} />
+                                                        </View>
+                                                    </View>
+                                                )
+                                            })
+                                        }
+                                    </View>
+                                    :
+                                    <View style={{ width: screenWidth - 25, height: BOX_HEIGHT }}>
+
+                                        <View style={styles.cardDateView}>
+                                            <Text style={styles.txtBlack}>
+                                                {moment().format('DD MMMM,YYYY')}
+                                            </Text>
+                                        </View>
+
+                                        <View style={styles.attendanceDetailsView}>
+                                            <AttendanceCardData title="Time in" value={timeIn} />
+                                            <AttendanceCardData title="Time Out" value={timeOut} />
+                                            <AttendanceCardData title="Total Time" value={totalHours} />
+                                            <AttendanceCardData title="Attendance" value={absentStatus} />
+                                        </View>
+                                    </View>
+                            }
+                        </ScrollView>
+                    </Animated.View>
                 </View>
             </View>
         )
@@ -443,8 +507,6 @@ const styles = StyleSheet.create({
         borderColor: 'grey'
     },
     cardView: {
-        width: screenWidth - 25,
-        height: (screenHeight / 8) + 30,
         backgroundColor: 'white',
         borderRadius: 15,
         elevation: 5,

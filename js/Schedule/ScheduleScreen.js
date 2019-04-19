@@ -2,12 +2,9 @@ import React, { Component } from 'react';
 import {
     StyleSheet,
     TouchableOpacity,
-    TextInput,
     Text,
     View,
-    Image,
-    KeyboardAvoidingView,
-    StatusBar, UIManager, findNodeHandle, ScrollView, Platform,
+    ScrollView
 } from 'react-native';
 import CalendarStrip from 'react-native-calendar-strip';
 import Icon from "react-native-vector-icons/FontAwesome5"
@@ -17,7 +14,7 @@ import { getTodayTask, markComplete } from './ScheduleAction';
 import { getCurrentCords } from '../Attendance/AttendanceAction';
 var jwtDecode = require('jwt-decode');
 import Spinner from 'react-native-loading-spinner-overlay';
-
+import Netinfo from '@react-native-community/netinfo'
 
 export default class ScheduleScreen extends Component {
 
@@ -41,19 +38,30 @@ export default class ScheduleScreen extends Component {
         )
     }
 
+
     componentDidMount() {
         this.makeDatesInMonth()
+        this.didFocusListener = this.props.navigation.addListener('didFocus', async () => {
+            let status = await Netinfo.isConnected.fetch()
         getToken()
             .then(resp => {
                 let user = jwtDecode(resp.token)
                 this.setState({
                     token: user
                 })
-                this.getTodayTask(moment().format("YYYY-MM-DD"), user.User.user_id)
+                if(status == true){
+                    this.getTodayTask(moment().format("YYYY-MM-DD"), user.User.user_id)
+                }else{
+                    this.setState({
+                        spinner: false
+                    })
+                    alert("No internet connection.")
+                }
             })
             .catch(error => {
 
             })
+        })
     }
 
 
@@ -61,6 +69,7 @@ export default class ScheduleScreen extends Component {
         this.setState({
             spinner: true
         })
+        
         getTodayTask(date, user)
             .then(response => {
                 console.log(response)
@@ -86,7 +95,10 @@ export default class ScheduleScreen extends Component {
 
             })
             .catch(error => {
-                console.log(error)
+                this.setState({
+                    spinner: false
+                })
+                alert("Network Failure")
             })
     }
 

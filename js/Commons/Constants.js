@@ -9,7 +9,7 @@ export const screenWidth = Dimensions.get('window').width;
 
 export const appMaincolor = "orange"
 
-export const baseUrl = 'http://192.168.0.128:3000/api/mobile/'
+export const baseUrl = 'http://192.168.0.143:3000/api/mobile/'
 
 
 export function getToken(){
