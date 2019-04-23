@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "@mapbox/polyline": "^1.0.0",
+    "@mauron85/react-native-background-geolocation": "^0.5.3",
+    "@react-native-community/netinfo": "^2.0.3",
     "axios": "^0.18.0",
     "jwt-decode": "^2.2.0",
     "moment": "^2.24.0",

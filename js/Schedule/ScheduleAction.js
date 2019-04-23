@@ -11,7 +11,11 @@ export function getTodayTask(date, user) {
                     resolve(response.data)
                 })
                 .catch(error => {
-                    reject(error)
+                    reject({
+                        'message': 'network error',
+                        'err': error,
+                        "code": 500
+                    })
                 })
         } catch (error) {
             reject({
@@ -23,11 +27,11 @@ export function getTodayTask(date, user) {
     })
 }
 
-export function markComplete(userid,taskid,latitude,longitude,date,time) {
+export function markComplete(userid, taskid, latitude, longitude, date, time) {
     return new Promise((resolve, reject) => {
 
         try {
-            let obj={
+            let obj = {
                 userid,
                 taskid,
                 latitude,
@@ -35,7 +39,7 @@ export function markComplete(userid,taskid,latitude,longitude,date,time) {
                 date,
                 time
             }
-            Axios.post(baseUrl + `task/markComplete`,obj)
+            Axios.post(baseUrl + `task/markComplete`, obj)
                 .then(response => {
                     resolve(response.data)
                 })
