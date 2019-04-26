@@ -9,6 +9,8 @@ import {
     AsyncStorage,
     ScrollView,
     Animated,
+    PanResponder,
+    Image
 } from "react-native";
 
 import MapView, { Marker, Circle } from "react-native-maps";
@@ -16,7 +18,7 @@ import moment from "moment"
 import { screenHeight, screenWidth, getToken } from "../Commons/Constants";
 import CalendarStrip from 'react-native-calendar-strip';
 import { markAttendance, getCurrentCords, fetchAttendance, fetchTasksMarkers } from "./AttendanceAction";
-import { creatAttendaneTable, test, test2, DBgetSelectedDayAttendance, creatTrackingTable, syncBulkTrackData } from "./DBAttendanceFunctions";
+import { creatAttendaneTable, test, test2, DBgetSelectedDayAttendance, creatTrackingTable, syncBulkTrackData, syncBulkAttendanceData } from "./DBAttendanceFunctions";
 import MapViewDirections from 'react-native-maps-directions';
 import Axios from "axios";
 import Polyline from '@mapbox/polyline';
@@ -25,7 +27,7 @@ import Spinner from 'react-native-loading-spinner-overlay';
 import Icon from "react-native-vector-icons/Entypo"
 import NetInfo from "@react-native-community/netinfo";
 import { backgroundConfig, onBackground, onForeground, start, stop } from "./BackgroundLocationConfig";
-
+import ParallaxScrollView from 'react-native-parallax-scroll-view';
 
 const BOX_HEIGHT = (screenHeight / 8) + 30
 export default class Attendance extends Component {
@@ -46,8 +48,8 @@ export default class Attendance extends Component {
             spinner: true,
             Error: false,
             selectedDateTasks: [],
-            scrollY: new Animated.Value(0)
         }
+        
         this._didFocusSubscription = props.navigation.addListener('didFocus', payload =>
             BackHandler.addEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
         );
@@ -72,50 +74,53 @@ export default class Attendance extends Component {
 
 
 
-    componentDidMount() {
+    async componentDidMount() {
         this._willBlurSubscription = this.props.navigation.addListener('willBlur', payload =>
             BackHandler.removeEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
         );
         this.didFocusListener = this.props.navigation.addListener('didFocus', async () => {
-            this.setState({
-                spinner: true
-            })
-            creatTrackingTable()
-            creatAttendaneTable()
+        this.setState({
+            spinner: true
+        })
+        creatTrackingTable()
+        creatAttendaneTable()
 
-            this.getType()
-            // test2()
-            getToken()
-                .then(response => {
-                    this.setState({
-                        token: jwtDecode(response.token)
-                    })
+        this.getType()
+        test2()
+        getToken()
+            .then(response => {
+                this.setState({
+                    token: jwtDecode(response.token),
+                    spinner: false
                 })
-                .catch(error => {
-                    this.setState({
-                        token: null
-                    })
+            })
+            .catch(error => {
+                this.setState({
+                    token: null,
+                    spinner: false
                 })
-            getCurrentCords()
-                .then(result => {
-                    this.setState({
-                        latitude: result.latitude,
-                        longitude: result.longitude,
-                        spinner: false,
-                        Error: false
-                    });
+            })
+        getCurrentCords()
+            .then(result => {
+                this.setState({
+                    latitude: result.latitude,
+                    longitude: result.longitude,
+                    spinner: false,
+                    Error: false
+                });
+            })
+            .catch(error => {
+                this.setState({
+                    errorMessage: 'Unable to find Location.',
+                    spinner: false,
+                    Error: true
                 })
-                .catch(error => {
-                    this.setState({
-                        errorMessage: 'Unable to find Location.',
-                        spinner: false,
-                        Error: true
-                    })
-                })
-            let connected = await NetInfo.isConnected.fetch()
-            if (connected == true) {
-                syncBulkTrackData()
-            }
+            })
+        let connected = await NetInfo.isConnected.fetch()
+        if (connected == true) {
+            syncBulkTrackData()
+            syncBulkAttendanceData()
+        }
         })
     }
 
@@ -144,11 +149,7 @@ export default class Attendance extends Component {
         this.setState({
             spinner: true
         })
-        if (type == 'CheckedIn') {
-            start()
-        } else if (type == 'CheckedOut') {
-            stop()
-        }
+        
         getCurrentCords()
             .then((result) => {
                 markAttendance(token.User.user_id, date, type, result.latitude, result.longitude)
@@ -158,6 +159,11 @@ export default class Attendance extends Component {
                             spinner: false,
                             Error: false
                         })
+                        if (type == 'CheckedIn') {
+                            start()
+                        } else if (type == 'CheckedOut') {
+                            stop()
+                        }
                         AsyncStorage.setItem('type', type)
                     })
                     .catch(err => {
@@ -185,7 +191,8 @@ export default class Attendance extends Component {
             } else {
                 this.askAttendancePermission(date, 'CheckedOut', 'Check out')
             }
-        } else {
+        } 
+        // else {
             fetchAttendance(date, token.User.user_id)
                 .then(result => {
                     console.log(result)
@@ -225,7 +232,7 @@ export default class Attendance extends Component {
                     })
                 })
 
-        }
+        // }
     }
 
     componentWillUnmount() {
@@ -258,7 +265,7 @@ export default class Attendance extends Component {
     renderDistance(data) {
         if (data.length > 0) {
             try {
-                Axios.get(`https://maps.googleapis.com/maps/api/directions/json?origin=${data[0].latitude + "," + data[0].longtitude}&destination=${data[1].latitude + "," + data[1].longtitude}&key=AIzaSyC-lBXEXkbbh2hvhZrpn2Q2snVKacI05WQ`)
+                Axios.get(`https://maps.googleapis.com/maps/api/directions/json?origin=${data[0].latitude + "," + data[0].longtitude}&destination=${data[1].latitude + "," + data[1].longtitude}&key=AIzaSyAohZ7btYPVl4_ABdRmMOO7t2Jo9cQF7s4`)
                     .then(result => {
 
                         let points = Polyline.decode(result.data.routes[0].overview_polyline.points)
@@ -301,7 +308,7 @@ export default class Attendance extends Component {
     }
 
     render() {
-        let { spinner, statusType, Error, scrollY, selectedDateData, absentStatus, selectedDateTasks, coords, errorMessage, latitude, longitude } = this.state
+        let { spinner, statusType, Error, scrollY, extended, selectedDateData, absentStatus, selectedDateTasks, coords, errorMessage, latitude, longitude } = this.state
         var timeIn = "--"
         var timeOut = "--"
         var totalHours = "--"
@@ -309,137 +316,116 @@ export default class Attendance extends Component {
         if (Error == true) {
             alert(errorMessage)
         }
-
-        const boxAnimatedHeight = scrollY.interpolate({
-            inputRange: [0, 3500],
-            outputRange: [BOX_HEIGHT, BOX_HEIGHT + 1500],
-            extrapolate: 'clamp'
-        })
         return (
             <View style={styles.container}>
+                {/* <StatusBar  hidden={true} ></StatusBar> */}
                 <Spinner
                     visible={spinner}
                     textContent={'Loading...'}
                 // textStyle={}
                 />
-                <MapView
-                    style={styles.mapView}
-                    region={{
-                        latitude: latitude,
-                        longitude: longitude,
-                        longitudeDelta: 0.3,
-                        latitudeDelta: 0.3,
-                    }}
-
-                    showsUserLocation={true}
-                    // onRegionChange={this.onRegionChange}
-                    showsMyLocationButton={true}
-                >
-                    {selectedDateTasks.length > 0 &&
-                        this.renderMarker(selectedDateTasks)
-                    }
-                    {selectedDateTasks.length > 0 &&
-                        this.showDirection(selectedDateTasks)
-                    }
-                    {/* <MapViewDirections
-                        origin={{latitude: 24.893148,longitude: 67.066502}}
-                        destination={{latitude: 24.948862, longitude: 67.073349}}
-                        apikey={"AIzaSyC-lBXEXkbbh2hvhZrpn2Q2snVKacI05WQ"}
-                        strokeWidth={3}
-                        strokeColor="hotpink"
-                    /> */}
-                    {/* <Circle
-                        center={{ latitude, longitude }}
-                        radius={20}
-                        strokeColor={'#1a66ff'}
-                        fillColor={'rgba(230,238,255,0.5)'}
-                    /> */}
-                </MapView>
                 <View style={styles.contentView}>
-                    <View style={styles.calenderView}>
-                        {/* <Text style={styles.txtBlack}>
-                            {moment().format('MMMM, YYYY')}
-                        </Text> */}
-                        {/* {
-                            this.renderDateRound()
-                        } */}
-                        <CalendarStrip
-                            style={{ height: 100 }}
-                            calendarHeaderStyle={{ alignSelf: 'flex-start', color: 'black' }}
-                            daySelectionAnimation={{ type: 'border', borderHighlightColor: 'grey', borderWidth: 1 }}
-                            highlightDateNumberStyle={(statusType == null || statusType == 'CheckedOut') ? styles.dateGreen : styles.dateRed}
-                            highlightDateNameStyle={{ color: 'black' }}
-                            dateNameStyle={{ color: 'black' }}
-                            dateNumberStyle={{ color: 'black', fontSize: 13 }}
-                            onDateSelected={(date) => {
-                                this.dateSelected(date)
-                            }}
-                        />
-                    </View>
-                    <Animated.View style={[styles.cardView, { width: screenWidth - 25, height: boxAnimatedHeight }]}>
-                        <ScrollView
-                            scrollEventThrottle={16}
-                            onScroll={Animated.event(
-                                [{ nativeEvent: { contentOffset: { y: this.state.scrollY } } }]
-                            )}
-                        >
-                            {
-                                (selectedDateData.length != 0) ?
-                                    <View>
-                                        {
-                                            selectedDateData.map((row, ind) => {
-                                                let currentDate = moment(row.Date).format('DD MMMM,YYYY')
-                                                if (Object.entries(row).length == 2) {
-                                                    let timearr = row.Time.split(',')
-                                                    timeIn = moment(timearr[0], 'hh:mm:ss').format("hh:mm a")
-                                                    timeOut = moment(timearr[1], 'hh:mm:ss').format("hh:mm a")
-                                                    totalHours = moment(timearr[1], 'hh:mm:ss').diff(moment(timearr[0], 'hh:mm:ss'), 'hours') + ' hr(s)'
-                                                    absentStatus = "Present"
-                                                } else {
-                                                    absentStatus = "Absent"
-                                                    timeIn = "--"
-                                                    timeOut = "--"
-                                                    totalHours = "--"
-                                                }
-                                                return (
-                                                    <View key={ind} style={{ width: screenWidth - 25, height: BOX_HEIGHT }}>
+                    <View style={{ flex: 5, width: screenWidth }}>
+                        <ParallaxScrollView
+                            backgroundColor="orange"
+                            parallaxHeaderHeight={screenHeight - 250}
+                            contentBackgroundColor="orange"
+                            renderForeground={() => (
+                                <View style={styles.container}>
+                                    <MapView
+                                        style={styles.mapView}
+                                        region={{
+                                            latitude: latitude,
+                                            longitude: longitude,
+                                            longitudeDelta: 0.3,
+                                            latitudeDelta: 0.3,
+                                        }}
 
-                                                        <View style={styles.cardDateView}>
-                                                            <Text style={styles.txtBlack}>
-                                                                {currentDate}
-                                                            </Text>
-                                                        </View>
-
-                                                        <View style={styles.attendanceDetailsView}>
-                                                            <AttendanceCardData title="Time in" value={timeIn} />
-                                                            <AttendanceCardData title="Time Out" value={timeOut} />
-                                                            <AttendanceCardData title="Total Time" value={totalHours} />
-                                                            <AttendanceCardData title="Attendance" value={absentStatus} />
-                                                        </View>
-                                                    </View>
-                                                )
-                                            })
+                                        showsUserLocation={true}
+                                    // onRegionChange={this.onRegionChange}
+                                    // showsMyLocationButton={true}
+                                    >
+                                        {selectedDateTasks.length > 0 &&
+                                            this.renderMarker(selectedDateTasks)
                                         }
-                                    </View>
-                                    :
-                                    <View style={{ width: screenWidth - 25, height: BOX_HEIGHT }}>
+                                        {selectedDateTasks.length > 0 &&
+                                            this.showDirection(selectedDateTasks)
+                                        }
 
-                                        <View style={styles.cardDateView}>
-                                            <Text style={styles.txtBlack}>
+                                    </MapView>
+                                    <CalendarStrip
+                                        style={{ height: 100 }}
+                                        calendarHeaderStyle={{ alignSelf: 'flex-start', color: 'black' }}
+                                        daySelectionAnimation={{ type: 'border', borderHighlightColor: 'grey', borderWidth: 1 }}
+                                        highlightDateNumberStyle={(statusType == null || statusType == 'CheckedOut') ? styles.dateGreen : styles.dateRed}
+                                        highlightDateNameStyle={{ color: 'black' }}
+                                        dateNameStyle={{ color: 'black' }}
+                                        dateNumberStyle={{ color: 'black', fontSize: 13 }}
+                                        onDateSelected={(date) => {
+                                            this.dateSelected(date)
+                                        }}
+                                    />
+                                </View>
+                            )}>
+                            <View>
+                                <Text style={{ marginLeft: 10, fontSize: 30, marginVertical: 10, color: 'white' }}>
+                                    Attendance Report
+                                </Text>
+                                {
+                                    (selectedDateData.length > 0) ?
+
+                                        selectedDateData.map((row,ind) => {
+                                            let currentDate = moment(row.Date).format('DD MMMM,YYYY')
+                                            if (Object.entries(row).length == 2) {
+                                                let timearr = row.Time.split(',')
+                                                timeIn = moment(timearr[0], 'hh:mm:ss').format("hh:mm a")
+                                                timeOut = moment(timearr[1], 'hh:mm:ss').format("hh:mm a")
+                                                totalHours = moment(timearr[1], 'hh:mm:ss').diff(moment(timearr[0], 'hh:mm:ss'), 'hours') + ' hr(s)'
+                                                absentStatus = <Image style={styles.pic} source={require('../../assets/images/Tick-01.png')}/>                                                    
+                                            } else {
+                                                absentStatus = <Image style={styles.pic} source={require('../../assets/images/Cross-01.png')}/>
+                                                timeIn = "--"
+                                                timeOut = "--"
+                                                totalHours = "--"
+                                            }
+
+                                            return (
+
+                                                <View key={ind} style={{ height: BOX_HEIGHT, width: screenWidth - 25, marginHorizontal: 10, backgroundColor: 'white', borderRadius: 5, marginVertical: 5 }}>
+                                                    <View style={styles.cardDateView}>
+                                                        <Text style={styles.txtBlack}>
+                                                            {currentDate}
+                                                        </Text>
+                                                    </View>
+
+                                                    <View style={styles.attendanceDetailsView}>
+                                                        <AttendanceCardData title="Time in" value={timeIn} />
+                                                        <AttendanceCardData title="Time Out" value={timeOut} />
+                                                        <AttendanceCardData title="Total Time" value={totalHours} />
+                                                        <AttendanceCardData title="Attendance" value={absentStatus} />
+                                                    </View>
+                                                </View>
+                                            )
+                                        })
+                                        :
+                                        <View style={{ height: BOX_HEIGHT, width: screenWidth - 25, marginHorizontal: 10, backgroundColor: 'white', borderRadius: 5, marginVertical: 5 }}>
+                                            <View style={styles.cardDateView}>
+                                                <Text style={styles.txtBlack}>
                                                 {moment().format('DD MMMM,YYYY')}
-                                            </Text>
-                                        </View>
+                                        </Text>
+                                            </View>
 
-                                        <View style={styles.attendanceDetailsView}>
-                                            <AttendanceCardData title="Time in" value={timeIn} />
-                                            <AttendanceCardData title="Time Out" value={timeOut} />
-                                            <AttendanceCardData title="Total Time" value={totalHours} />
-                                            <AttendanceCardData title="Attendance" value={absentStatus} />
+                                            <View style={styles.attendanceDetailsView}>
+                                                <AttendanceCardData title="Time in" value={timeIn} />
+                                                <AttendanceCardData title="Time Out" value={timeOut} />
+                                                <AttendanceCardData title="Total Time" value={totalHours} />
+                                                <AttendanceCardData title="Attendance" value={absentStatus} />
+                                            </View>
                                         </View>
-                                    </View>
-                            }
-                        </ScrollView>
-                    </Animated.View>
+                                }
+                            </View>
+                        </ParallaxScrollView>
+                    </View>
                 </View>
             </View>
         )
@@ -466,7 +452,23 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        justifyContent: 'center'
+        // justifyContent: 'center',
+        // alignItems: 'center'
+    },
+    pic: {
+        width: 20,
+        height: 20,
+        borderRadius: 20 / 2,
+        borderColor: 'grey',
+        justifyContent: 'space-around',
+        alignItems: 'flex-start',
+        //backgroundColor: 'white',
+
+    },
+    stickySection: {
+        height: 70,
+        width: 300,
+        justifyContent: 'flex-end'
     },
     mapView: {
         position: 'absolute',
@@ -476,11 +478,14 @@ const styles = StyleSheet.create({
         bottom: 0,
     },
     contentView: {
-        justifyContent: 'space-between',
+        // justifyContent: 'space-between',
+        flex: 1,
         alignItems: 'center',
-        height: screenHeight - 100
+        // height: screenHeight - 200
+        // height: "100%"
     },
     calenderView: {
+        flex: 2,
         width: screenWidth - 25,
         justifyContent: 'space-between'
     },

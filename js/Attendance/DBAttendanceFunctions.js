@@ -15,6 +15,7 @@ export function creatAttendaneTable() {
             type TEXT,
             date TEXT,
             time TEXT,
+            isSynced INTEGER,
             user_id INTEGER);`;
 
     db.transaction(function (txn) {
@@ -74,27 +75,59 @@ export function syncBulkTrackData() {
             [],
             (tx, res) => {
                 let data = res.rows.raw()
-                console.log(data)
                 let obj ={
                     data: data
                 }
-                // Axios.post(baseUrl+'attendance/syncBulkTrackData',obj)
-                // .then(resp=>{
-                //     let {code} = resp.data
-                //     if(code == 200){
-                //         // db.executeSql(
-                //         //     `DELETE from tbl_tracking where isSynced = 0`,
-                //         //     [],
-                //         //     function (tx, res) {
-                //                 console.log('delete isSynced 0 rows', res);
-                //         //     }
-                //         // );   
-                //     }
+                Axios.post(baseUrl+'attendance/syncBulkTrackData',obj)
+                .then(resp=>{
+                    let {code} = resp.data
+                    if(code == 200){
+                        db.executeSql(
+                            `DELETE from tbl_tracking where isSynced = 0`,
+                            [],
+                            function (tx, res) {
+                                console.log('delete isSynced 0 rows', res);
+                            }
+                        );   
+                    }
 
-                // })
-                // .catch(error=>{
-                //     console.log(error)
-                // })
+                })
+                .catch(error=>{
+                    console.log(error)
+                })
+            }
+        );
+    })
+}
+
+
+export function syncBulkAttendanceData() {
+    db.transaction((txn) => {
+        txn.executeSql(
+            `select * from tbl_attendance where isSynced = 0`,
+            [],
+            (tx, res) => {
+                let data = res.rows.raw()
+                let obj ={
+                    data: data
+                }
+                Axios.post(baseUrl+'attendance/syncBulkAttandanceData',obj)
+                .then(resp=>{
+                    let {code} = resp.data
+                    if(code == 200){
+                        db.executeSql(
+                            `DELETE from tbl_attendance`,
+                            [],
+                            function (tx, res) {
+                                console.log('delete attendance isSynced 0 rows', res);
+                            }
+                        );   
+                    }
+
+                })
+                .catch(error=>{
+                    console.log(error)
+                })
             }
         );
     })
@@ -129,8 +162,8 @@ export function DBMarkAttendance(user, date, time, type, latitude, longitude) {
                     reject({ data: 0, errorMessage: 'Attendance Already Marked.' })
                 } else {
                     txn.executeSql(
-                        `insert into tbl_attendance(latitude,longtitude,type,date,time,user_id) 
-                    values(${latitude},${longitude},'${type}','${date}','${time}',${user})`,
+                        `insert into tbl_attendance(latitude,longtitude,type,date,time,user_id,isSynced) 
+                    values(${latitude},${longitude},'${type}','${date}','${time}',${user},0)`,
                         [],
                         (tx, res) => {
                             if (res.rowsAffected == 1) {
@@ -190,7 +223,7 @@ export function test2() {
     let limitdate = moment('2019-04-08', 'YYYY-MM-DD').subtract(10, 'days').format("YYYY-MM-DD")
     db.transaction(function (txn) {
         txn.executeSql(
-            `select * from tbl_tracking`,
+            `select * from tbl_attendance`,
             [],
             function (tx, res) {
                 console.log('result', res.rows.raw());

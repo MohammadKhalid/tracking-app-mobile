@@ -32,6 +32,7 @@ export function sendCurrentAttendance(user, date, time, type, latitude, longitud
         latitude: latitude,
         longitude: longitude
     }
+    console.log(obj)
     try {
         Axios.post(baseUrl + "attendance/markAttendance", obj)
             .then(resp => {
@@ -70,7 +71,7 @@ export function sendTransitData(user, date, time, type, latitude, longitude, tra
                 }
             })
             .catch(error => {
-                console.log('in insert tracj api catch', error)
+                console.log('in insert tracj api catch')
             })
     } catch (error) {
 
@@ -149,7 +150,7 @@ export function getCurrentCords() {
                     message: 'failed to get location'
                 })
             },
-            { enableHighAccuracy: true, timeout: 200000, maximumAge: 1000 },
+            { enableHighAccuracy: false, timeout: 200000, maximumAge: 1000 },
         );
     })
 }

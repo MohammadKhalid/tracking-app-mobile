@@ -16,6 +16,7 @@ import PersonalNotesScreen from './PersonalNotes/PersonalNotesScreen';
 import AddPersonalNotes from './PersonalNotes/AddPersonalNotes';
 import ViewPersonalNotes from './PersonalNotes/ViewPersonalNotes';
 import ScheduleScreen from './Schedule/ScheduleScreen';
+import SampleApp from './Attendance/Attendance2';
 
 
 // -------------- top navigator -------------
@@ -68,6 +69,7 @@ class App extends React.Component {
       <Apps></Apps>
       {/* <ScheduleScreen></ScheduleScreen> */}
       {/* <AttendanceScreen></AttendanceScreen> */}
+      {/* <SampleApp></SampleApp> */}
       </View>
     );
   }
