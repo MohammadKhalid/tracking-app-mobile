@@ -27,8 +27,10 @@ export function start() {
     startOnBoot: false,
     stopOnTerminate: false,
     locationProvider: BackgroundGeolocation.ACTIVITY_PROVIDER,
+    // interval: 120000,
     interval: 30000,
-    fastestInterval: 10000,
+    // fastestInterval: 60000,
+    fastestInterval: 30000,
     activitiesInterval: 15000,
     stopOnStillActivity: false,
   });

@@ -15,6 +15,7 @@ import { getCurrentCords } from '../Attendance/AttendanceAction';
 var jwtDecode = require('jwt-decode');
 import Spinner from 'react-native-loading-spinner-overlay';
 import Netinfo from '@react-native-community/netinfo'
+import { creatScheduleTable, test2, saveBulkTask, test } from './DBSchedules';
 
 export default class ScheduleScreen extends Component {
 
@@ -43,6 +44,11 @@ export default class ScheduleScreen extends Component {
         this.makeDatesInMonth()
         this.didFocusListener = this.props.navigation.addListener('didFocus', async () => {
             let status = await Netinfo.isConnected.fetch()
+            if(status == true){
+                saveBulkTask()
+            }
+            creatScheduleTable()
+            test2()
         getToken()
             .then(resp => {
                 let user = jwtDecode(resp.token)
@@ -78,7 +84,6 @@ export default class ScheduleScreen extends Component {
 
                     let completed = data.filter(x => x.Status == 'Completed')
                     let inCompleted = data.filter(x => x.Status == 'Incomplete')
-                    console.log(completed)
                     this.setState({
                         incompleteTask: inCompleted,
                         completedTasks: completed,
@@ -125,21 +130,29 @@ export default class ScheduleScreen extends Component {
 
     radioPressed = (ind, taskid) => {
         let { incompleteTask, completedTasks, token } = this.state
+        // this.setState({
+        //     spinner: true
+        // })
+        
+        let Completed = incompleteTask.splice(ind, 1);
+        completedTasks.push(Completed.pop())
         this.setState({
-            spinner: true
+            incompleteTask: incompleteTask,
+            completedTasks: completedTasks,
+            spinner: false
         })
         getCurrentCords()
             .then(result => {
                 markComplete(token.User.user_id, taskid, result.latitude, result.longitude, moment().format('YYYY-MM-DD'), moment().format('hh:mm:ss'))
                     .then(resp => {
                         console.log(resp)
-                        let Completed = incompleteTask.splice(ind, 1);
-                        completedTasks.push(Completed.pop())
-                        this.setState({
-                            incompleteTask: incompleteTask,
-                            completedTasks: completedTasks,
-                            spinner: false
-                        })
+                        // let Completed = incompleteTask.splice(ind, 1);
+                        // completedTasks.push(Completed.pop())
+                        // this.setState({
+                        //     incompleteTask: incompleteTask,
+                        //     completedTasks: completedTasks,
+                        //     spinner: false
+                        // })
                     })
                     .catch(error => {
                         console.log(resp)

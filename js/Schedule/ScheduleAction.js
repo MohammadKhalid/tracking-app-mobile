@@ -1,6 +1,8 @@
 import moment from "moment"
 import Axios from "axios";
 import { baseUrl } from "../Commons/Constants";
+import { DBMarkComplete } from "./DBSchedules";
+import NetInfo from "@react-native-community/netinfo";
 
 
 export function getTodayTask(date, user) {
@@ -28,8 +30,8 @@ export function getTodayTask(date, user) {
 }
 
 export function markComplete(userid, taskid, latitude, longitude, date, time) {
-    return new Promise((resolve, reject) => {
-
+    return new Promise(async (resolve, reject) => {
+        console.log('markcomplet')
         try {
             let obj = {
                 userid,
@@ -39,13 +41,31 @@ export function markComplete(userid, taskid, latitude, longitude, date, time) {
                 date,
                 time
             }
-            Axios.post(baseUrl + `task/markComplete`, obj)
-                .then(response => {
-                    resolve(response.data)
-                })
-                .catch(error => {
-                    reject(error)
-                })
+
+            let connected = await NetInfo.isConnected.fetch()
+            if (connected == true) {
+                Axios.post(baseUrl + `task/markComplete`, obj)
+                    .then(response => {
+                        let { code } = response.data
+                        if (code == 200) {
+                            resolve(response.data)
+                        }
+                    })
+                    .catch(error => {
+                        console.log(error, "in  mark complete api")
+                        reject(error)
+                    })
+            } else {
+                DBMarkComplete(userid, taskid, time, date, latitude, longitude)
+                    .then(async resp => {
+                        console.log(resp)
+                    })
+                    .catch(err => {
+                        console.log(error,"in  mark complete Db erreor")
+                        reject(err)
+                    })
+            }
+
         } catch (error) {
             reject({
                 'message': 'network error',
