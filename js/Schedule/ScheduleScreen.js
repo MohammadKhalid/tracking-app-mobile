@@ -43,11 +43,11 @@ export default class ScheduleScreen extends Component {
     componentDidMount() {
         this.makeDatesInMonth()
         this.didFocusListener = this.props.navigation.addListener('didFocus', async () => {
+            creatScheduleTable()
             let status = await Netinfo.isConnected.fetch()
             if(status == true){
-                saveBulkTask()
+                // saveBulkTask()
             }
-            creatScheduleTable()
             test2()
         getToken()
             .then(resp => {
@@ -56,7 +56,7 @@ export default class ScheduleScreen extends Component {
                     token: user
                 })
                 if(status == true){
-                    this.getTodayTask(moment().format("YYYY-MM-DD"), user.User.user_id)
+                    this.getTodayTask(moment().format("YYYY-MM-DD"), user.user.id)
                 }else{
                     this.setState({
                         spinner: false
@@ -78,12 +78,11 @@ export default class ScheduleScreen extends Component {
         
         getTodayTask(date, user)
             .then(response => {
-                console.log(response)
                 let { message, data, code } = response
                 if (code == 200) {
 
-                    let completed = data.filter(x => x.Status == 'Completed')
-                    let inCompleted = data.filter(x => x.Status == 'Incomplete')
+                    let completed = data.filter(x => x.completed == true)
+                    let inCompleted = data.filter(x => x.completed != true )
                     this.setState({
                         incompleteTask: inCompleted,
                         completedTasks: completed,
@@ -124,7 +123,7 @@ export default class ScheduleScreen extends Component {
 
     dateSelected = (date) => {
         let { token } = this.state
-        this.getTodayTask(date.format('YYYY-MM-DD'), token.User.user_id)
+        this.getTodayTask(date.format('YYYY-MM-DD'), token.user.id)
 
     }
 
@@ -133,7 +132,7 @@ export default class ScheduleScreen extends Component {
         // this.setState({
         //     spinner: true
         // })
-        
+        debugger
         let Completed = incompleteTask.splice(ind, 1);
         completedTasks.push(Completed.pop())
         this.setState({
@@ -143,7 +142,7 @@ export default class ScheduleScreen extends Component {
         })
         getCurrentCords()
             .then(result => {
-                markComplete(token.User.user_id, taskid, result.latitude, result.longitude, moment().format('YYYY-MM-DD'), moment().format('hh:mm:ss'))
+                markComplete(token.user.id, taskid, result.latitude, result.longitude, moment().format('YYYY-MM-DD'), moment().format('hh:mm:ss'))
                     .then(resp => {
                         console.log(resp)
                         // let Completed = incompleteTask.splice(ind, 1);
@@ -224,7 +223,7 @@ export default class ScheduleScreen extends Component {
                                 incompleteTask.map((row, ind) => {
                                     return (
                                         <View key={ind} style={styles.TaskRow}>
-                                            <TouchableOpacity onPress={this.radioPressed.bind(this, ind, row.Id)} style={styles.radioButtonView}>
+                                            <TouchableOpacity onPress={this.radioPressed.bind(this, ind, row.id)} style={styles.radioButtonView}>
                                                 <View style={styles.radioButton}>
 
                                                 </View>

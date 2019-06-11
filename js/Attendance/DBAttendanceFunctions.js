@@ -78,7 +78,7 @@ export function syncBulkTrackData() {
                 let obj ={
                     data: data
                 }
-                Axios.post(baseUrl+'attendance/syncBulkTrackData',obj)
+                Axios.post(baseUrl+'tracking/syncBulkTrackData',obj)
                 .then(resp=>{
                     let {code} = resp.data
                     if(code == 200){

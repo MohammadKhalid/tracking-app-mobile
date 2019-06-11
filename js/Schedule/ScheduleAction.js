@@ -31,20 +31,17 @@ export function getTodayTask(date, user) {
 
 export function markComplete(userid, taskid, latitude, longitude, date, time) {
     return new Promise(async (resolve, reject) => {
-        console.log('markcomplet')
         try {
             let obj = {
-                userid,
-                taskid,
+                userId:userid,
                 latitude,
                 longitude,
-                date,
-                time
+                date
             }
 
             let connected = await NetInfo.isConnected.fetch()
             if (connected == true) {
-                Axios.post(baseUrl + `task/markComplete`, obj)
+                Axios.put(baseUrl + `task/markComplete/${taskid}`, obj)
                     .then(response => {
                         let { code } = response.data
                         if (code == 200) {

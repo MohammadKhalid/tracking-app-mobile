@@ -48,8 +48,7 @@ BackgroundGeolocation.on('start',() => {
     console.log(latitude)
     let token = await getToken()
     if(token.token !== null){
-      let user = jwtDecode(token.token).User.user_id
-      console.log("after check",user)
+      let user = jwtDecode(token.token).user.id
       let date = moment().format("YYYY-MM-DD")
       let time = moment().format("hh:mm:ss")
       DBSaveTransitData(user,date,time,"on route",latitude,longitude,id)
