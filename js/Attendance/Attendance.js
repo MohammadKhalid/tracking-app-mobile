@@ -7,9 +7,6 @@ import {
     Alert,
     BackHandler,
     AsyncStorage,
-    ScrollView,
-    Animated,
-    PanResponder,
     Image
 } from "react-native";
 
@@ -19,7 +16,6 @@ import { screenHeight, screenWidth, getToken } from "../Commons/Constants";
 import CalendarStrip from 'react-native-calendar-strip';
 import { markAttendance, getCurrentCords, fetchAttendance, fetchTasksMarkers } from "./AttendanceAction";
 import { creatAttendaneTable, test, test2, DBgetSelectedDayAttendance, creatTrackingTable, syncBulkTrackData, syncBulkAttendanceData } from "./DBAttendanceFunctions";
-import MapViewDirections from 'react-native-maps-directions';
 import Axios from "axios";
 import Polyline from '@mapbox/polyline';
 var jwtDecode = require('jwt-decode');
@@ -49,7 +45,7 @@ export default class Attendance extends Component {
             Error: false,
             selectedDateTasks: [],
         }
-        
+
         this._didFocusSubscription = props.navigation.addListener('didFocus', payload =>
             BackHandler.addEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
         );
@@ -79,48 +75,48 @@ export default class Attendance extends Component {
             BackHandler.removeEventListener('hardwareBackPress', this.onBackButtonPressAndroid)
         );
         this.didFocusListener = this.props.navigation.addListener('didFocus', async () => {
-        this.setState({
-            spinner: true
-        })
-        creatTrackingTable()
-        creatAttendaneTable()
+            this.setState({
+                spinner: true
+            })
+            creatTrackingTable()
+            creatAttendaneTable()
 
-        this.getType()
-        test2()
-        getToken()
-            .then(response => {
-                this.setState({
-                    token: jwtDecode(response.token),
-                    spinner: false
+            this.getType()
+            test2()
+            getToken()
+                .then(response => {
+                    this.setState({
+                        token: jwtDecode(response.token),
+                        spinner: false
+                    })
                 })
-            })
-            .catch(error => {
-                this.setState({
-                    token: null,
-                    spinner: false
+                .catch(error => {
+                    this.setState({
+                        token: null,
+                        spinner: false
+                    })
                 })
-            })
-        getCurrentCords()
-            .then(result => {
-                this.setState({
-                    latitude: result.latitude,
-                    longitude: result.longitude,
-                    spinner: false,
-                    Error: false
-                });
-            })
-            .catch(error => {
-                this.setState({
-                    errorMessage: 'Unable to find Location.',
-                    spinner: false,
-                    Error: true
+            getCurrentCords()
+                .then(result => {
+                    this.setState({
+                        latitude: result.latitude,
+                        longitude: result.longitude,
+                        spinner: false,
+                        Error: false
+                    });
                 })
-            })
-        let connected = await NetInfo.isConnected.fetch()
-        if (connected == true) {
-            syncBulkTrackData()
-            syncBulkAttendanceData()
-        }
+                .catch(error => {
+                    this.setState({
+                        errorMessage: 'Unable to find Location.',
+                        spinner: false,
+                        Error: true
+                    })
+                })
+            let connected = await NetInfo.isConnected.fetch()
+            if (connected == true) {
+                syncBulkTrackData()
+                // syncBulkAttendanceData()
+            }
         })
     }
 
@@ -149,10 +145,10 @@ export default class Attendance extends Component {
         this.setState({
             spinner: true
         })
-        
+
         getCurrentCords()
             .then((result) => {
-                markAttendance(token.User.user_id, date, type, result.latitude, result.longitude)
+                markAttendance(token.user.id, date, type, result.latitude, result.longitude)
                     .then(resp => {
                         this.setState({
                             statusType: type,
@@ -183,7 +179,7 @@ export default class Attendance extends Component {
             })
     }
 
-    dateSelected = (date) => {
+    dateSelected = async (date) => {
         let { statusType, token } = this.state
         if (date.format("YYYY-MM-DD") == moment().format("YYYY-MM-DD")) {
             if (statusType == null || statusType == 'CheckedOut') {
@@ -191,52 +187,26 @@ export default class Attendance extends Component {
             } else {
                 this.askAttendancePermission(date, 'CheckedOut', 'Check out')
             }
-        } 
+        }
         // else {
-            fetchAttendance(date, token.User.user_id)
-                .then(result => {
-                    console.log(result)
-                    this.setState({
-                        selectedDateData: result.data,
-                        Error: false,
-                        errorMessage: ''
-                    })
-                })
-                .catch(error => {
-                    this.setState({
-                        Error: true,
-                        errorMessage: 'Network error'
-                    })
-                })
-            fetchTasksMarkers(date, token.User.user_id)
-                .then(result => {
-                    console.log(result)
-                    if (result.dataCode == 0) {
-                        this.setState({
-                            selectedDateTasks: result.data,
-                            Error: false,
-                            errorMessage: ''
-                        })
-                    } else {
-                        this.setState({
-                            selectedDateTasks: [],
-                            Error: false,
-                            errorMessage: ''
-                        })
-                    }
-                })
-                .catch(error => {
-                    this.setState({
-                        Error: true,
-                        errorMessage: 'Network error'
-                    })
-                })
-
-        // }
-    }
-
-    componentWillUnmount() {
-        // console.log('asdasd')
+        let attendanceResult = await fetchAttendance(date, token.user.id)
+        if (attendanceResult.code == 200) {
+            this.setState({
+                selectedDateData: attendanceResult.data,
+                Error: false,
+                errorMessage: ''
+            })
+        } else if (attendanceResult.code == 500) {
+            this.setState({
+                selectedDateData: []
+            })
+            alert('Sever failed to serve request.')
+        } else {
+            this.setState({
+                selectedDateData: []
+            })
+            alert('Network error.')
+        }
     }
 
     renderMarker(data) {
@@ -312,7 +282,6 @@ export default class Attendance extends Component {
         var timeIn = "--"
         var timeOut = "--"
         var totalHours = "--"
-        console.log("selectedDateData", selectedDateData)
         if (Error == true) {
             alert(errorMessage)
         }
@@ -374,21 +343,25 @@ export default class Attendance extends Component {
                                 {
                                     (selectedDateData.length > 0) ?
 
-                                        selectedDateData.map((row,ind) => {
-                                            let currentDate = moment(row.Date).format('DD MMMM,YYYY')
-                                            if (Object.entries(row).length == 2) {
-                                                let timearr = row.Time.split(',')
-                                                timeIn = moment(timearr[0], 'hh:mm:ss').format("hh:mm a")
-                                                timeOut = moment(timearr[1], 'hh:mm:ss').format("hh:mm a")
-                                                totalHours = moment(timearr[1], 'hh:mm:ss').diff(moment(timearr[0], 'hh:mm:ss'), 'hours') + ' hr(s)'
-                                                absentStatus = <Image style={styles.pic} source={require('../../assets/images/Tick-01.png')}/>                                                    
-                                            } else {
-                                                absentStatus = <Image style={styles.pic} source={require('../../assets/images/Cross-01.png')}/>
+                                        selectedDateData.map((row, ind) => {
+                                            let currentDate = moment(row.date,'YYYY-MM-DD').format('YYYY-MM-DD')
+                                            if(row.isPresent == 1){
+                                                absentStatus = <Image style={styles.pic} source={require('../../assets/images/Tick-01.png')} />
+                                                timeIn = moment(row.checkInTime, 'HH:mm:ss').format("hh:mm a")
+                                                timeOut = moment(row.checkOutTime, 'HH:mm:ss').format("hh:mm a")
+                                                totalHours = moment(row.checkOutTime, 'HH:mm:ss').diff(moment(row.checkInTime, 'HH:mm:ss'), 'hours') + ' hr(s)'
+                                            }
+                                            else if(row.isPresent == 2){
+                                                absentStatus = <Image style={styles.pic} source={require('../../assets/images/warn.png')} />
+                                                timeIn = moment(row.checkInTime, 'HH:mm:ss').format("hh:mm a")
+                                                timeOut = "--"
+                                                totalHours = "--"
+                                            }else{
+                                                absentStatus = <Image style={styles.pic} source={require('../../assets/images/Cross-01.png')} />
                                                 timeIn = "--"
                                                 timeOut = "--"
                                                 totalHours = "--"
                                             }
-
                                             return (
 
                                                 <View key={ind} style={{ height: BOX_HEIGHT, width: screenWidth - 25, marginHorizontal: 10, backgroundColor: 'white', borderRadius: 5, marginVertical: 5 }}>
@@ -411,8 +384,8 @@ export default class Attendance extends Component {
                                         <View style={{ height: BOX_HEIGHT, width: screenWidth - 25, marginHorizontal: 10, backgroundColor: 'white', borderRadius: 5, marginVertical: 5 }}>
                                             <View style={styles.cardDateView}>
                                                 <Text style={styles.txtBlack}>
-                                                {moment().format('DD MMMM,YYYY')}
-                                        </Text>
+                                                    {moment().format('DD MMMM,YYYY')}
+                                                </Text>
                                             </View>
 
                                             <View style={styles.attendanceDetailsView}>
