@@ -5,16 +5,16 @@ import {
     TextInput,
     Text,
     View,
-    Image,
-    KeyboardAvoidingView,
-    StatusBar, UIManager, findNodeHandle, ScrollView,
+    ScrollView,
+    AsyncStorage
 } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
+import netInfo from "@react-native-community/netinfo"
 import IconE from "react-native-vector-icons/Entypo"
 import IconM from "react-native-vector-icons/MaterialCommunityIcons"
 import moment from 'moment'
 import DatePicker from 'react-native-datepicker'
-import { appMaincolor, getToken } from '../Commons/Constants';
+import {getToken } from '../Commons/Constants';
 import {  DBInsertPersonalNote } from './DBPersonalNotesFunction';
 var jwtDecode = require('jwt-decode');
 
@@ -49,8 +49,9 @@ export default class AddPersonalNotes extends Component {
         })
     }
 
-    makeSave() {
+    async makeSave() {
         let {titleText,note,subNotes,datetime,Error,errorMessage,token} = this.state
+        
         if(titleText == ''){
             this.setState({
                 Error: true,
@@ -74,11 +75,16 @@ export default class AddPersonalNotes extends Component {
             this.setState({
                 spinner: true
             })
-            DBInsertPersonalNote(titleText,note,subNotes,datetime,token.User.user_id)
-            .then(response=>{
+            
+            DBInsertPersonalNote(titleText,note,subNotes,datetime,token.user.id)
+            .then(async (response)=>{
                 this.setState({
                     spinner: false
                 })
+                let net = await netInfo.isConnected.fetch()
+                if(net == true){
+                    AsyncStorage.setItem('sync_notes','1')
+                }
                 this.props.navigation.navigate('personalnotes')
             })
             .catch(error=>{

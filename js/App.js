@@ -1,7 +1,8 @@
 import React from 'react';
 import {
   View,
-  StatusBar
+  StatusBar,
+  Alert
 } from 'react-native'
 import {
   createStackNavigator,
@@ -17,13 +18,36 @@ import AddPersonalNotes from './PersonalNotes/AddPersonalNotes';
 import ViewPersonalNotes from './PersonalNotes/ViewPersonalNotes';
 import ScheduleScreen from './Schedule/ScheduleScreen';
 import SampleApp from './Attendance/Attendance2';
-
-
+import { tableDrops } from './Schedule/DBSchedules';
+import IconM from "react-native-vector-icons/FontAwesome"
 // -------------- top navigator -------------
 const AppTabNavigator = createMaterialTopTabNavigator({
   attendance: AttendanceScreen,
   schedule: ScheduleScreen,
-  personalnotes: PersonalNotesScreen
+  personalnotes: PersonalNotesScreen,
+  logout: {
+    screen: () => null,
+    navigationOptions: {
+      tabBarOnPress: ({ navigation }) => {
+        Alert.alert(
+          'Logout',
+          `Are you sure you wanr to logout?`,
+          [
+            { text: 'Cancel', onPress: () => console.log('Cancel Pressed'), },
+            {
+              text: 'Ok', onPress: () => {
+                tableDrops()
+                navigation.navigate('navigator')
+              }
+            },
+          ],
+          { cancelable: false },
+        );
+
+      },
+      tabBarIcon: ({ tintColor }) => (<IconM name="power-off" size={25} style={{ color: tintColor }} />),
+    }
+  }
 }, {
     swipeEnabled: true,
     tabBarPosition: 'bottom',

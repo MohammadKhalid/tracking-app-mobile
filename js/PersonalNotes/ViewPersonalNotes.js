@@ -5,9 +5,8 @@ import {
     TextInput,
     Text,
     View,
-    Image,
-    KeyboardAvoidingView,
-    StatusBar, UIManager, findNodeHandle, ScrollView,
+    ScrollView,
+    AsyncStorage
 } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import IconE from "react-native-vector-icons/Entypo"
@@ -49,6 +48,7 @@ export default class ViewPersonalNotes extends Component {
         DBUpdatePersonalNote(titleText, note, subNotes, datetime,id)
         .then(response=>{
             if(response.error == false){
+                AsyncStorage.setItem('sync_notes','1')
                 this.props.navigation.navigate('personalnotes')
             }
         })

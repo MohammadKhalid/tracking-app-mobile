@@ -1,6 +1,7 @@
 import { openDatabase } from 'react-native-sqlite-storage';
 import Axios from 'axios';
 import { baseUrl } from '../Commons/Constants';
+import {AsyncStorage} from "react-native"
 var db = openDatabase({ name: 'Coordinates.db', createFromLocation: '~/Coordinates.db', location: 'Library' }, (open) => { console.log("asdasd", open) }, (e) => { console.log(e) });
 
 export function creatScheduleTable() {
@@ -25,6 +26,27 @@ export function creatScheduleTable() {
     });
 }
 
+export function tableDrops(){
+    AsyncStorage.clear()
+    db.executeSql(
+        `delete from tbl_schedule`,
+        [],
+        function (tx, res) {
+            console.log('tbl_schedule', res);
+        })
+    db.executeSql(
+        `delete from tbl_personal`,
+        [],
+        function (tx, res) {
+            console.log('tbl_personal', res);
+        })
+    db.executeSql(
+        `delete from tbl_attendance`,
+        [],
+        function (tx, res) {
+            console.log('tbl_attendance', res);
+        })
+}
 
 export function test() {
     db.transaction(function (txn) {

@@ -5,16 +5,17 @@ import {
     TextInput,
     Text,
     View,
-    Image,
-    KeyboardAvoidingView,
-    StatusBar, UIManager, findNodeHandle, ScrollView,
+    ScrollView,
+    AsyncStorage
 } from 'react-native';
+import NetInfo from '@react-native-community/netinfo'
 import Icon from "react-native-vector-icons/Foundation"
 import IconM from "react-native-vector-icons/MaterialCommunityIcons"
 import moment from 'moment'
-import { appMaincolor } from '../Commons/Constants';
+import { appMaincolor, getToken } from '../Commons/Constants';
 import Spinner from 'react-native-loading-spinner-overlay';
-import { DBSelectAllNotes, test, createNotesTable } from './DBPersonalNotesFunction';
+import { DBSelectAllNotes, test, createNotesTable, syncNotes,getNotes } from './DBPersonalNotesFunction';
+var jwtDecode = require('jwt-decode');
 
 export default class PersonalNotesScreen extends Component {
 
@@ -35,38 +36,63 @@ export default class PersonalNotesScreen extends Component {
         )
     }
 
-    componentWillMount(){  
+    componentWillMount() {
         this.willFocusListener = this.props.navigation.addListener('willFocus', () => {
             this.setState({
                 spinner: true,
-                notes:[]
+                notes: []
             })
         })
     }
 
     componentDidMount() {
-        this.didFocusListener = this.props.navigation.addListener('didFocus', () => {
-        createNotesTable()
-            DBSelectAllNotes()
-                .then(response => {
+
+        this.didFocusListener = this.props.navigation.addListener('didFocus', async () => {
+            createNotesTable()
+            let is_sync = await AsyncStorage.getItem('sync_notes')
+            if (is_sync == null) {
+                let token = await getToken()
+                let result = await getNotes(jwtDecode(token.token).user.id)
+                if(result.code == 200){
                     this.setState({
-                        notes: response.data,
+                        notes: result.data ,
                         Error: false,
                         spinner: false
                     })
-                })
-                .catch(error => {
-                    this.setState({
-                        notes: [],
-                        Error: true,
-                        errorMessage: error.message,
-                        spinner: false
+                    AsyncStorage.setItem('sync_notes', '0')
+                }else if(code == 300){
+                    alert("Network Error.")
+                }
+            } else {
+                DBSelectAllNotes()
+                    .then(async (response) => {
+                        this.setState({
+                            notes: response.data,
+                            Error: false,
+                            spinner: false
+                        })
+                        let net = await NetInfo.isConnected.fetch()
+                        let is_sync = await AsyncStorage.getItem('sync_notes')
+                        debugger
+                        // AsyncStorage.setItem('sync_notes','1')
+                        if (net == true && is_sync == "1") {
+                            syncNotes(response.data);
+                            AsyncStorage.setItem('sync_notes', '0')
+                        }
                     })
-                })
+                    .catch(error => {
+                        this.setState({
+                            notes: [],
+                            Error: true,
+                            errorMessage: error.message,
+                            spinner: false
+                        })
+                    })
+            }
         })
     }
 
-    
+
 
 
     render() {
@@ -90,7 +116,7 @@ export default class PersonalNotesScreen extends Component {
                                 {
                                     notes.map((row, ind) => {
                                         return (
-                                            <TouchableOpacity onPress={()=> this.props.navigation.navigate('viewnotes',{data: row})} key={row.id}>
+                                            <TouchableOpacity onPress={() => this.props.navigation.navigate('viewnotes', { data: row })} key={row.id}>
                                                 <NotesList title={row.title} note={row.note} date={row.date} />
                                             </TouchableOpacity>
                                         )
@@ -98,7 +124,7 @@ export default class PersonalNotesScreen extends Component {
                                 }
                             </ScrollView>
                             :
-                            <View style={{ flex: 1,justifyContent: 'center',alignItems: 'center'}}>
+                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                                 <Text>
                                     {errorMessage}
                                 </Text>
@@ -125,8 +151,8 @@ function NotesList(props) {
                 <Text style={{ color: 'black', fontWeight: "bold", fontSize: 15, }}>{props.title}</Text>
                 <Text style={{ fontSize: 15, }}>{props.note}</Text>
             </View>
-            <View style={{ flex: 1,flexDirection:'row',justifyContent:'flex-end',alignItems: 'center' }}>
-                <Text style={{ fontSize: 15, }}>{(props.date == null || props.date == '')? null: moment(props.date, 'DD-MM-YYYY HH:mm').format('DD-MM-YYYY hh:mm a')}</Text>
+            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
+                <Text style={{ fontSize: 15, }}>{(props.date == null || props.date == '') ? null : moment(props.date, 'DD-MM-YYYY HH:mm').format('DD-MM-YYYY hh:mm a')}</Text>
                 <IconM name="chevron-right" size={20} />
             </View>
         </View>
