@@ -15,7 +15,7 @@ import IconM from "react-native-vector-icons/MaterialCommunityIcons"
 import moment from 'moment'
 import DatePicker from 'react-native-datepicker'
 import { appMaincolor, getToken } from '../Commons/Constants';
-import {  DBInsertPersonalNote } from './DBPersonalNotesFunction';
+import {  PostPersonalNote } from './PersonalNotesActions';
 var jwtDecode = require('jwt-decode');
 
 
@@ -74,7 +74,8 @@ export default class AddPersonalNotes extends Component {
             this.setState({
                 spinner: true
             })
-            DBInsertPersonalNote(titleText,note,subNotes,datetime,token.User.user_id)
+            console.log(token.user.id);
+            PostPersonalNote(titleText,note,subNotes,datetime,token.user.id)
             .then(response=>{
                 this.setState({
                     spinner: false
